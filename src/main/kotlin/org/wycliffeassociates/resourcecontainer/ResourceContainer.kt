@@ -3,14 +3,11 @@ package org.wycliffeassociates.resourcecontainer
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.wycliffeassociates.resourcecontainer.entity.*
 import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import java.io.File
 import java.io.IOException
-import java.nio.file.Files
 
 class ResourceContainer private constructor(dir: File) {
 
@@ -100,43 +97,29 @@ class ResourceContainer private constructor(dir: File) {
         }
 
         fun create(dir: File, manifest: Map<String, Any>): ResourceContainer {
-            if(dir.exists()) throw RCException("Resource container already exists")
+            if (dir.exists()) throw RCException("Resource container already exists")
 
-            val dc = DublinCore(
-                    type = "",
-                    conformsTo = "rc" + conformsTo,
-                    format = "",
-                    identifier = "",
-                    title = "",
-                    subject = "",
-                    description = "",
-                    language = arrayListOf(Language()),
-                    source = arrayListOf(),
-                    rights = "",
-                    creator = "",
-                    contributor = arrayListOf(),
-                    relation = arrayListOf(),
-                    publisher = "",
-                    issued = "",
-                    modified = "",
-                    version = "",
-                    checking = Checking()
-            )
-
-            if(manifest.containsKey("dublin_core")) {
+            val dc = dublincore {
+                conformsTo = "rc$conformsTo"
+                checking = Checking()
+            }
+//
+            if (manifest.containsKey("dublin_core")) {
                 val mdc = manifest.get("dublin_code") as Map<String, Any>
                 val requiredKeys = arrayOf("type", "format", "identifier", "language", "rights")
-                for(key in requiredKeys) {
+                for (key in requiredKeys) {
                     if (!mdc.containsKey(key) || mdc[key] == null) {
                         throw InvalidRCException("Missing dublin_core.$key")
                     }
                 }
-
             } else {
-
+                throw InvalidRCException("Missing dublin_core")
             }
 
+
+
         }
+
     }
 }
 
