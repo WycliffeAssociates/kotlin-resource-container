@@ -15,6 +15,8 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
+    compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.6'
     compile 'com.esotericsoftware.yamlbeans:yamlbeans:1.09'
 
     // https://mvnrepository.com/artifact/org.json/json
