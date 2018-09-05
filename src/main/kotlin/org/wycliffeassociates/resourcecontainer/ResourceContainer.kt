@@ -91,11 +91,11 @@ class ResourceContainer private constructor(val dir: File) {
         throw RCException("Resource container lacks required conformsTo field")
     }
 
-    fun toc(): TableOfContents {
+    fun toc(): TableOfContents? {
         return toc(null)
     }
 
-    fun toc(identifier: String?): TableOfContents {
+    fun toc(identifier: String?): TableOfContents? {
         val pj = project(identifier)
         pj?.let {
             val contentDir = File(dir, Paths.get(pj.path).fileName.toString())
@@ -108,7 +108,7 @@ class ResourceContainer private constructor(val dir: File) {
                 }
             }
         }
-        throw RCException("Could not read project.")
+        return null
     }
 
     companion object Factory {
