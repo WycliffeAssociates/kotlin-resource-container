@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
 import org.wycliffeassociates.resourcecontainer.ResourceContainer
+import org.wycliffeassociates.resourcecontainer.errors.RCException
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -45,8 +46,9 @@ data class Link(
             lastChunk?.let {
                 tail = "-" + formatNumber(lastChunk)
             }
-            return formatNumber(chapter) + ":" + formatNumber(chunk) + tail
+            return formatNumber(chapter ?: "") + ":" + formatNumber(chunk ?: "") + tail
         }
+        throw RCException("invalid title")
     }
 
     /**

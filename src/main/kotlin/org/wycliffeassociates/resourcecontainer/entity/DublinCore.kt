@@ -11,7 +11,7 @@ data class DublinCore(
     var title: String = "",
     var subject: String = "",
     var description: String = "",
-    var language: List<Language> = arrayListOf(),
+    var language: Language? = null,
     var source: List<Source> = arrayListOf(),
     var rights: String = "",
     var creator: String = "",
@@ -20,8 +20,7 @@ data class DublinCore(
     var publisher: String = "",
     var issued: String = "",
     var modified: String = "",
-    var version: String = "",
-    var checking: Checking? = null
+    var version: String = ""
 )
 
 fun dublincore(init: DublinCore.() -> Unit): DublinCore {

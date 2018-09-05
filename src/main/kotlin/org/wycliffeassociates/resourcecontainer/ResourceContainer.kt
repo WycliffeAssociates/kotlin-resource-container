@@ -1,5 +1,6 @@
 package org.wycliffeassociates.resourcecontainer
 
+import com.esotericsoftware.yamlbeans.YamlReader
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -7,9 +8,12 @@ import org.wycliffeassociates.resourcecontainer.entity.*
 import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import java.io.File
+import java.io.FileReader
 import java.io.IOException
+import java.nio.file.Path
+import java.nio.file.Paths
 
-class ResourceContainer private constructor(dir: File) {
+class ResourceContainer private constructor(val dir: File) {
 
     val manifest: Manifest
 
@@ -87,38 +91,54 @@ class ResourceContainer private constructor(dir: File) {
         throw RCException("Resource container lacks required conformsTo field")
     }
 
+    fun toc(): TableOfContents {
+        return toc(null)
+    }
+
+    fun toc(identifier: String?): TableOfContents {
+        val pj = project(identifier)
+        pj?.let {
+            val contentDir = File(dir, Paths.get(pj.path).fileName.toString())
+            val tocFile = File(contentDir, "toc.yaml")
+            if (tocFile.exists()) {
+                val mapper = ObjectMapper(YAMLFactory())
+                mapper.registerModule(KotlinModule())
+                return tocFile.bufferedReader().use {
+                    mapper.readValue(it, TableOfContents::class.java)
+                }
+            }
+        }
+        throw RCException("Could not read project.")
+    }
+
     companion object Factory {
 
         const val conformsTo = "0.2"
 
-        fun load(dir: File, strict: Boolean = true): ResourceContainer {
-            val rc = ResourceContainer(dir)
-            return rc
-        }
+        fun load(dir: File, strict: Boolean = true) = ResourceContainer(dir)
 
-        fun create(dir: File, manifest: Map<String, Any>): ResourceContainer {
-            if (dir.exists()) throw RCException("Resource container already exists")
-
-            val dc = dublincore {
-                conformsTo = "rc$conformsTo"
-                checking = Checking()
-            }
+//        fun create(dir: File, manifest: Map<String, Any>): ResourceContainer {
+//            if (dir.exists()) throw RCException("Resource container already exists")
 //
-            if (manifest.containsKey("dublin_core")) {
-                val mdc = manifest.get("dublin_code") as Map<String, Any>
-                val requiredKeys = arrayOf("type", "format", "identifier", "language", "rights")
-                for (key in requiredKeys) {
-                    if (!mdc.containsKey(key) || mdc[key] == null) {
-                        throw InvalidRCException("Missing dublin_core.$key")
-                    }
-                }
-            } else {
-                throw InvalidRCException("Missing dublin_core")
-            }
-
-
-
-        }
+//            val dc = dublincore {
+//                conformsTo = "rc$conformsTo"
+//                checking = Checking()
+//            }
+////
+//            if (manifest.containsKey("dublin_core")) {
+//                val mdc = manifest.get("dublin_code") as Map<String, Any>
+//                val requiredKeys = arrayOf("type", "format", "identifier", "language", "rights")
+//                for (key in requiredKeys) {
+//                    if (!mdc.containsKey(key) || mdc[key] == null) {
+//                        throw InvalidRCException("Missing dublin_core.$key")
+//                    }
+//                }
+//            } else {
+//                throw InvalidRCException("Missing dublin_core")
+//            }
+//
+//
+//        }
 
     }
 }
