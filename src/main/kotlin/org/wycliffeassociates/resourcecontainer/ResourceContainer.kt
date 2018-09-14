@@ -1,32 +1,95 @@
 package org.wycliffeassociates.resourcecontainer
 
-import com.esotericsoftware.yamlbeans.YamlReader
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import org.wycliffeassociates.resourcecontainer.entity.*
-import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
+import org.wycliffeassociates.resourcecontainer.entity.Manifest
+import org.wycliffeassociates.resourcecontainer.entity.Project
+import org.wycliffeassociates.resourcecontainer.entity.TableOfContents
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import java.io.File
-import java.io.FileReader
 import java.io.IOException
-import java.nio.file.Path
 import java.nio.file.Paths
+
+
+interface Config {
+    fun read(dir: File): Config
+    fun write(dir: File)
+}
 
 class ResourceContainer private constructor(val dir: File) {
 
-    val manifest: Manifest
+    var config: Config? = null
+
+    var manifest: Manifest
 
     init {
+        manifest = read()
+    }
+
+    private fun read(): Manifest {
         val manifestFile = File(dir, "manifest.yaml")
         if (manifestFile.exists()) {
             val mapper = ObjectMapper(YAMLFactory())
             mapper.registerModule(KotlinModule())
-            manifest = manifestFile.bufferedReader().use {
+            return manifestFile.bufferedReader().use {
                 mapper.readValue(it, Manifest::class.java)
+            }
+            config?.let {
+                val configFile = File(dir, "config.yaml")
+                if(configFile.exists()) {
+                    this.config = it.read(configFile)
+                }
             }
         } else {
             throw IOException()
+        }
+    }
+
+    fun write() {
+        writeManifest()
+        for (p in manifest.projects) {
+            writeTableOfContents(p)
+        }
+    }
+
+    fun writeManifest() {
+        writeManifest(File(dir, "manifest.yaml"))
+    }
+
+    private fun writeManifest(out: File) {
+        val mapper = ObjectMapper(YAMLFactory())
+        mapper.registerModule(KotlinModule())
+        val manifestFile = out.bufferedWriter().use {
+            mapper.writeValue(it, manifest)
+        }
+    }
+
+    fun writeTableOfContents(projectId: String) {
+        val p = project(projectId)
+        p?.let {
+            writeTableOfContents(p)
+        }
+    }
+
+    fun writeConfig() {
+        config?.let {
+            val configFile = File(dir, "config.yaml")
+            if(configFile.exists()) {
+                it.write(configFile)
+            }
+        }
+    }
+
+    fun writeTableOfContents(project: Project) {
+        writeTableOfContents(File(dir, project.path), project)
+    }
+
+    private fun writeTableOfContents(out: File, project: Project) {
+        val mapper = ObjectMapper(YAMLFactory())
+        mapper.registerModule(KotlinModule())
+        val manifestFile = out.bufferedWriter().use {
+            mapper.writeValue(it, project)
         }
     }
 
@@ -111,34 +174,25 @@ class ResourceContainer private constructor(val dir: File) {
         return null
     }
 
-    companion object Factory {
+
+
+    companion object {
 
         const val conformsTo = "0.2"
 
-        fun load(dir: File, strict: Boolean = true) = ResourceContainer(dir)
+        fun create(dir: File, init: ResourceContainer.() -> Unit): ResourceContainer {
+            val rc = ResourceContainer(dir)
+            rc.init()
+            return rc
+        }
 
-//        fun create(dir: File, manifest: Map<String, Any>): ResourceContainer {
-//            if (dir.exists()) throw RCException("Resource container already exists")
-//
-//            val dc = dublincore {
-//                conformsTo = "rc$conformsTo"
-//                checking = Checking()
-//            }
-////
-//            if (manifest.containsKey("dublin_core")) {
-//                val mdc = manifest.get("dublin_code") as Map<String, Any>
-//                val requiredKeys = arrayOf("type", "format", "identifier", "language", "rights")
-//                for (key in requiredKeys) {
-//                    if (!mdc.containsKey(key) || mdc[key] == null) {
-//                        throw InvalidRCException("Missing dublin_core.$key")
-//                    }
-//                }
-//            } else {
-//                throw InvalidRCException("Missing dublin_core")
-//            }
-//
-//
-//        }
+        fun load(config: Config, dir: File, strict: Boolean = true): ResourceContainer {
+            val rc = load(dir, strict)
+            rc.config = config
+            return rc
+        }
+
+        fun load(dir: File, strict: Boolean = true) = ResourceContainer(dir)
 
     }
 }

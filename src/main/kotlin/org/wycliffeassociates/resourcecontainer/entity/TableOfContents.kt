@@ -10,5 +10,11 @@ data class TableOfContents(
     @JsonProperty("sub-title")
     var subtitle: String = "",
     var link: String = "",
-    val sections: List<TableOfContents> = arrayListOf()
+    val sections: MutableList<TableOfContents> = arrayListOf()
 )
+
+fun toc(init: TableOfContents.() -> Unit): TableOfContents {
+    val toc = TableOfContents()
+    toc.init()
+    return toc
+}
