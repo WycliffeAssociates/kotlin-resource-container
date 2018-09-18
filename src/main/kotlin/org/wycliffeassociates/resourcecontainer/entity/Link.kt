@@ -1,54 +1,101 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
-import org.wycliffeassociates.resourcecontainer.ResourceContainer
-import org.wycliffeassociates.resourcecontainer.errors.RCException
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-data class Link(
-        var title: String?,
-        val url: String?,
-        val resource: String? = null,
-        val project: String? = null,
-        val language: String? = null,
-        val arguments: String? = null,
-        val protocol: String? = null,
-        val chapter: String? = null,
-        val chunk: String? = null,
-        val lastChunk: String? = null
-) {
+/**
+ * Represents a link to a resource container
+ */
+
+class Link {
+    var title: String?
+    val url: String?
+    val resource: String?
+    val project: String?
+    val language: String?
+    val arguments: String?
+    val protocol: String?
+    val chapter: String?
+    val chunk: String?
+    val lastChunk: String?
 
     /**
      * Checks if this is an external link
      * @return
      */
-    inline fun isExternal(): Boolean = url != null
+    val isExternal: Boolean
+        get() = this.url != null
 
     /**
      * Checks if this is a media link
      * @return
      */
-    inline fun isMedia(): Boolean = protocol != null
+    val isMedia: Boolean
+        get() = this.protocol != null
 
     /**
-     * Checks if this is a Bible passage link
+     * Checksk if this is a Bible passage link
      * @return
      */
-    inline fun isPassage(): Boolean = chapter != null && chunk != null
+    val isPassage: Boolean
+        get() = this.chapter != null && this.chunk != null
+
+    /**
+     * Creates a simple external link
+     * @param title the human readable title of the link
+     * @param url the external link address
+     */
+    private constructor(title: String?, url: String?) {
+        this.title = title
+        this.url = url
+
+        protocol = null
+        resource = null
+        project = null
+        chapter = null
+        chunk = null
+        lastChunk = null
+        arguments = null
+        language = null
+    }
+
+    /**
+     * Creates a new resource container link.
+     *
+     * @param protocol used to indicate if this is a media link
+     * @param title the human readable title of the link
+     * @param language the language of the linked resource container
+     * @param project the project of the linked resource container
+     * @param resource the resource of the linked resource container
+     * @param arguments the raw arguments on the link
+     * @param chapter the chapter in the linked resource container
+     * @param chunk the chunk (first one if the arguments included a range of chunks) in the linked resource container
+     * @param lastChunk the last chunk (if the arguments included a range of chunks) referenced by this link
+     */
+    private constructor(protocol: String?, title: String?, language: String?, project: String?, resource: String?, arguments: String?, chapter: String?, chunk: String?, lastChunk: String?) {
+        this.url = null
+        this.protocol = protocol
+        this.title = title
+        this.language = language
+        this.project = project
+        this.resource = resource
+        this.arguments = arguments
+        this.chapter = chapter
+        this.chunk = chunk
+        this.lastChunk = lastChunk
+    }
 
     /**
      * Returns the formatted passage title e.g. 1:2-3
      * @return
      */
-    fun passageTitle(): String {
-        if (isPassage()) {
+    fun passageTitle(): String? {
+        if (isPassage) {
             var tail = ""
-            lastChunk?.let {
-                tail = "-" + formatNumber(lastChunk)
-            }
-            return formatNumber(chapter ?: "") + ":" + formatNumber(chunk ?: "") + tail
+            if (lastChunk != null) tail = "-" + formatNumber(lastChunk)
+            return formatNumber(chapter) + ":" + formatNumber(chunk) + tail
         }
-        throw RCException("invalid title")
+        return null
     }
 
     /**
@@ -57,14 +104,14 @@ data class Link(
      * @param value
      * @return
      */
-    private fun formatNumber(value: String): String {
+    private fun formatNumber(value: String?): String {
         try {
-            return Integer.parseInt(value).toString()
+            return Integer.parseInt(value!!).toString() + ""
         } catch (e: NumberFormatException) {
         }
-        return value.trim().toLowerCase()
-    }
 
+        return value!!.trim { it <= ' ' }.toLowerCase()
+    }
 
     companion object {
 
@@ -75,47 +122,42 @@ data class Link(
          * @throws Exception if the link is invalid
          */
         @Throws(Exception::class)
-        fun parseLink(link: String): Link {
+        fun parseLink(link: String): Link? {
             val anonymousPattern = Pattern.compile("\\[\\[([^\\]]*)\\]\\]", Pattern.DOTALL)
-            val titledPattern = Pattern.compile("\\[([^\\]]*)\\]\\(([^\\)]*)\\)", Pattern.DOTALL);
+            val titledPattern = Pattern.compile("\\[([^\\]]*)\\]\\(([^\\)]*)\\)", Pattern.DOTALL)
 
             var linkTitle: String? = null
-            var linkPath = link
+            var linkPath: String? = link
             var m: Matcher
-
             var numMatches = 1
 
-            //find anonymous links
+            // find anonymous links
             m = anonymousPattern.matcher(link)
             while (m.find()) {
-                if (numMatches > 1) {
-                    throw Exception("Invalid link! Multiple links found")
-                }
+                if (numMatches > 1) throw Exception("Invalid link! Multiple links found")
                 numMatches++
                 linkPath = m.group(1).toLowerCase()
             }
 
-            //find titled links
+            // find titled links
             m = titledPattern.matcher(link)
             numMatches = 1
             while (m.find()) {
-                if (numMatches > 1) {
-                    throw Exception("Invalid link! Multiple links found")
-                }
+                if (numMatches > 1) throw Exception("Invalid link! Multiple links found")
                 numMatches++
                 linkTitle = m.group(1)
                 linkPath = m.group(2).toLowerCase()
             }
 
-            //external link
-            if (linkPath.startsWith("http")) {
-                linkTitle.let {
-                    return Link(linkTitle, linkPath)
-                }
-            }
-            return parseResourceLink(linkTitle, linkPath)
-        }
+            // process link path
+            return if (linkPath != null) {
+                // external link
+                if (linkPath.startsWith("http")) {
+                    Link(linkTitle, linkPath)
+                } else parseResourceLink(linkTitle, linkPath)
+            } else null
 
+        }
 
         /**
          * Parses a resource container link
@@ -123,9 +165,10 @@ data class Link(
          * @param path
          * @return
          */
-        fun parseResourceLink(title: String?, path: String): Link {
+        @Throws(Exception::class)
+        private fun parseResourceLink(title: String?, path: String): Link? {
+            var title = title
             var path = path
-
             val pattern = Pattern.compile("^((\\w+):)?\\/?(.*)", Pattern.DOTALL)
 
             var protocol: String? = null
@@ -146,7 +189,7 @@ data class Link(
                 path = m.group(3)
             }
 
-            val components = path.split("\\/").toTypedArray()
+            val components = path.split("\\/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
 
             // /chapter
             if (components.size == 1) arguments = components[0]
@@ -203,7 +246,7 @@ data class Link(
 
             // nullify empty strings
             protocol = nullEmpty(protocol)
-            var title = nullEmpty(title)
+            title = nullEmpty(title)
             language = nullEmpty(language)
             project = nullEmpty(project)
             resource = nullEmpty(resource)
@@ -218,9 +261,30 @@ data class Link(
 
             return if (project != null && resource != null || arguments != null) {
                 Link(protocol, title, language, project, resource, arguments, chapter, chunk, lastChunk)
-            } else throw Exception("Invalid Link! Could not parse resource link")
+            } else null
         }
 
-        private inline fun nullEmpty(value: String?): String? = if (value.isNullOrEmpty()) null else value
+
+        /**
+         * Returns the value if it is not empty otherwise null
+         * @param value
+         * @return
+         */
+        private fun nullEmpty(value: String?): String? {
+            return if (value != null && value.isEmpty()) null else value
+        }
+
+        /**
+         * Returns a list of links found in the text.
+         * This is used to turn inline Bible passages into links.
+         * The returned links will include their position within the charsequence
+         *
+         * @param text the text that will be searched for Bible passages
+         * @return
+         */
+        fun findLinks(text: CharSequence): List<Link>? {
+            // TODO: 10/11/16 automatically parse bible passages.
+            return null
+        }
     }
 }
