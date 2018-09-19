@@ -1,5 +1,6 @@
 package org.wycliffeassociates.resourcecontainer
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -30,7 +31,7 @@ class ResourceContainer private constructor(val dir: File) {
         if (manifestFile.exists()) {
             val mapper = ObjectMapper(YAMLFactory())
             mapper.registerModule(KotlinModule())
-            return manifestFile.bufferedReader().use {
+            manifest = manifestFile.bufferedReader().use {
                 mapper.readValue(it, Manifest::class.java)
             }
             config?.let {
@@ -39,6 +40,7 @@ class ResourceContainer private constructor(val dir: File) {
                     this.config = it.read(configFile)
                 }
             }
+            return manifest
         } else {
             throw IOException()
         }
@@ -60,6 +62,7 @@ class ResourceContainer private constructor(val dir: File) {
     private fun writeManifest(out: File) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
+        mapper.setSerializationInclusion(Include.NON_NULL)
         val manifestFile = out.bufferedWriter().use {
             mapper.writeValue(it, manifest)
         }
@@ -88,6 +91,8 @@ class ResourceContainer private constructor(val dir: File) {
     private fun writeTableOfContents(out: File, project: Project) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
+        mapper.setSerializationInclusion(Include.NON_NULL)
+        mapper.setSerializationInclusion(Include.NON_EMPTY)
         out.bufferedWriter().use {
             mapper.writeValue(it, project)
         }

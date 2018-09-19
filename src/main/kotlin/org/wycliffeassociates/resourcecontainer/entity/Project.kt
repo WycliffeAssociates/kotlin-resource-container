@@ -1,7 +1,9 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import org.wycliffeassociates.resourcecontainer.Config
 
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 data class Project(
         var title: String = "",
         var versification: String = "",
