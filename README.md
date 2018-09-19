@@ -39,7 +39,7 @@ ResourceContainer provides a create and load static method for creation.
 ```kotlin
 val rc = ResourceContainer.create(File("./resource_container_dir")) {
     manifest = manifest {
-        dublinCore = dublincore{
+        dublinCore = dublincore {
             conformsTo = "rc0.2"
             contributor = listOf("A Contributor", "Another Contributor")
             creator = "Someone or Organization"
@@ -90,4 +90,44 @@ To write changes:
 
     // write config to config.yaml
     container.writeConfig()
+```
+
+### Config files
+
+As configuration files do not follow a set specification, this library
+only provides loose support for them. An interface is provided, pushing the burden of
+implementing read and write functionality to the developer.
+
+```kotlin
+Interface Config {
+    fun read(dir: File)
+    fun write(dir: File)
+}
+
+val rc = ResourceContainer.load(config: Config, dir: File, strict: Boolean = true)
+
+```
+
+I recommend using a kotlin data class to model your config specification and using
+Jackson's YAML and Kotlin modules for serializing and deserializing. 
+
+The following is an example of how this library makes use of this library
+
+Read:
+```kotlin
+val mapper = ObjectMapper(YAMLFactory())
+mapper.registerModule(KotlinModule())
+manifest = manifestFile.bufferedReader().use {
+    mapper.readValue(it, Manifest::class.java)
+}
+```
+
+Write:
+```kotlin
+val mapper = ObjectMapper(YAMLFactory())
+mapper.registerModule(KotlinModule())
+mapper.setSerializationInclusion(Include.NON_NULL)
+val manifestFile = out.bufferedWriter().use {
+    mapper.writeValue(it, manifest)
+}
 ```
