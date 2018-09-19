@@ -23,11 +23,7 @@ class ResourceContainer private constructor(val dir: File) {
 
     var config: Config? = null
 
-    var manifest: Manifest
-
-    init {
-        manifest = read()
-    }
+    lateinit var manifest: Manifest
 
     private fun read(): Manifest {
         val manifestFile = File(dir, "manifest.yaml")
@@ -51,7 +47,9 @@ class ResourceContainer private constructor(val dir: File) {
     fun write() {
         writeManifest()
         for (p in manifest.projects) {
-            writeTableOfContents(p)
+            if(!p.path.isNullOrEmpty()) {
+                writeTableOfContents(p)
+            }
         }
     }
 
@@ -90,7 +88,7 @@ class ResourceContainer private constructor(val dir: File) {
     private fun writeTableOfContents(out: File, project: Project) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
-        val manifestFile = out.bufferedWriter().use {
+        out.bufferedWriter().use {
             mapper.writeValue(it, project)
         }
     }
@@ -349,7 +347,11 @@ class ResourceContainer private constructor(val dir: File) {
             return rc
         }
 
-        fun load(dir: File, strict: Boolean = true) = ResourceContainer(dir)
+        fun load(dir: File, strict: Boolean = true): ResourceContainer {
+            val rc = ResourceContainer(dir)
+            rc.read()
+            return rc
+        }
 
     }
 }
