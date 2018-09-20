@@ -63,9 +63,9 @@ class ContainerUnitTest {
         assertEquals(8, container.chunks("tit", "01").size)
         assertEquals("Titus", container.readChunk("tit", "front", "title").trim())
 
-        assertEquals(4, container.chapters("gen").size)
-        assertEquals(8, container.chunks("gen", "01").size)
-        assertEquals("Genesis", container.readChunk("gen", "front", "title").trim())
+//        assertEquals(4, container.chapters("gen").size)
+//        assertEquals(8, container.chunks("gen", "01").size)
+//        assertEquals("Genesis", container.readChunk("gen", "front", "title").trim())
 
 //        // write to toc and config
 //        container.writeTOC("gen", "something")
@@ -184,7 +184,7 @@ class ContainerUnitTest {
 
         try {
             val container = ResourceContainer.load(containerDir)
-           // assertNull(container)
+            assertNull(container)
         } catch (e: UnsupportedRCException) {
             assertEquals("Found 9999990.1 but expected " + ResourceContainer.conformsTo, e.message)
         }

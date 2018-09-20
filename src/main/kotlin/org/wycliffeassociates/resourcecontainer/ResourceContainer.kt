@@ -42,20 +42,22 @@ class ResourceContainer private constructor(val dir: File) {
             }
             return manifest
         } else {
-            throw IOException()
+            throw IOException("Missing manifest.yaml")
         }
     }
 
     fun write() {
+        dir.mkdirs()
         writeManifest()
         for (p in manifest.projects) {
             if(!p.path.isNullOrEmpty()) {
-                writeTableOfContents(p)
+                //writeTableOfContents(p)
             }
         }
     }
 
     fun writeManifest() {
+        dir.mkdirs()
         writeManifest(File(dir, "manifest.yaml"))
     }
 
@@ -85,6 +87,7 @@ class ResourceContainer private constructor(val dir: File) {
     }
 
     fun writeTableOfContents(project: Project) {
+        dir.mkdirs()
         writeTableOfContents(File(dir, project.path), project)
     }
 
@@ -343,6 +346,9 @@ class ResourceContainer private constructor(val dir: File) {
         fun create(dir: File, init: ResourceContainer.() -> Unit): ResourceContainer {
             val rc = ResourceContainer(dir)
             rc.init()
+            if(rc.conformsTo().isNullOrEmpty()) {
+                rc.manifest.dublinCore.conformsTo = conformsTo
+            }
             return rc
         }
 
