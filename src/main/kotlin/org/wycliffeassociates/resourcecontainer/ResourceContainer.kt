@@ -7,7 +7,10 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.wycliffeassociates.resourcecontainer.entity.Manifest
 import org.wycliffeassociates.resourcecontainer.entity.Project
 import org.wycliffeassociates.resourcecontainer.entity.TableOfContents
+import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
+import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
+import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -361,6 +364,20 @@ class ResourceContainer private constructor(val dir: File) {
         fun load(dir: File, strict: Boolean = true): ResourceContainer {
             val rc = ResourceContainer(dir)
             rc.read()
+
+            if(strict) {
+                if(rc.manifest == null) {
+                    throw InvalidRCException("Missing manifest.yaml")
+                }
+                if(Semver.gt(rc.conformsTo(), conformsTo)) {
+                    throw UnsupportedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
+                }
+                if(Semver.lt(rc.conformsTo(), conformsTo)) {
+                    throw OutdatedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
+                }
+            }
+
+
             return rc
         }
 

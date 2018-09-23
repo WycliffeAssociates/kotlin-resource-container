@@ -30,7 +30,7 @@ class ContainerUnitTest {
         assertEquals(8, container.chunks("01").size)
         assertEquals("Titus", container.readChunk("front", "title").trim())
         //assertTrue(container.config().get("content").size() > 0)
-        //assertTrue(container.toc()!!.size() > 0)
+        assertNotNull(container.toc())
 
         // write to toc and config
         //container.writeTOC("something")
