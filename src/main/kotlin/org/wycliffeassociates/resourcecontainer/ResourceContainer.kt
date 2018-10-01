@@ -1,23 +1,35 @@
 package org.wycliffeassociates.resourcecontainer
 
-import com.esotericsoftware.yamlbeans.YamlReader
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import org.wycliffeassociates.resourcecontainer.entity.*
+import org.wycliffeassociates.resourcecontainer.entity.Manifest
+import org.wycliffeassociates.resourcecontainer.entity.Project
+import org.wycliffeassociates.resourcecontainer.entity.TableOfContents
 import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
+import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
+import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
 import java.io.File
-import java.io.FileReader
 import java.io.IOException
-import java.nio.file.Path
+import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.*
+
+
+interface Config {
+    fun read(dir: File): Config
+    fun write(dir: File)
+}
 
 class ResourceContainer private constructor(val dir: File) {
 
-    val manifest: Manifest
+    var config: Config? = null
 
-    init {
+    lateinit var manifest: Manifest
+
+    private fun read(): Manifest {
         val manifestFile = File(dir, "manifest.yaml")
         if (manifestFile.exists()) {
             val mapper = ObjectMapper(YAMLFactory())
@@ -25,8 +37,70 @@ class ResourceContainer private constructor(val dir: File) {
             manifest = manifestFile.bufferedReader().use {
                 mapper.readValue(it, Manifest::class.java)
             }
+            config?.let {
+                val configFile = File(dir, "config.yaml")
+                if(configFile.exists()) {
+                    this.config = it.read(configFile)
+                }
+            }
+            return manifest
         } else {
-            throw IOException()
+            throw IOException("Missing manifest.yaml")
+        }
+    }
+
+    fun write() {
+        dir.mkdirs()
+        writeManifest()
+        for (p in manifest.projects) {
+            if(!p.path.isNullOrEmpty()) {
+                //writeTableOfContents(p)
+            }
+        }
+    }
+
+    fun writeManifest() {
+        dir.mkdirs()
+        writeManifest(File(dir, "manifest.yaml"))
+    }
+
+    private fun writeManifest(out: File) {
+        val mapper = ObjectMapper(YAMLFactory())
+        mapper.registerModule(KotlinModule())
+        mapper.setSerializationInclusion(Include.NON_NULL)
+        val manifestFile = out.bufferedWriter().use {
+            mapper.writeValue(it, manifest)
+        }
+    }
+
+    fun writeTableOfContents(projectId: String) {
+        val p = project(projectId)
+        p?.let {
+            writeTableOfContents(p)
+        }
+    }
+
+    fun writeConfig() {
+        config?.let {
+            val configFile = File(dir, "config.yaml")
+            if(configFile.exists()) {
+                it.write(configFile)
+            }
+        }
+    }
+
+    fun writeTableOfContents(project: Project) {
+        dir.mkdirs()
+        writeTableOfContents(File(dir, project.path), project)
+    }
+
+    private fun writeTableOfContents(out: File, project: Project) {
+        val mapper = ObjectMapper(YAMLFactory())
+        mapper.registerModule(KotlinModule())
+        mapper.setSerializationInclusion(Include.NON_NULL)
+        mapper.setSerializationInclusion(Include.NON_EMPTY)
+        out.bufferedWriter().use {
+            mapper.writeValue(it, project)
         }
     }
 
@@ -111,34 +185,201 @@ class ResourceContainer private constructor(val dir: File) {
         return null
     }
 
-    companion object Factory {
+
+    /**
+     * Returns an un-ordered list of chapter slugs in this resource container
+     *
+     * @return an array of chapter identifiers
+     */
+    @Throws(Exception::class)
+    fun chapters(): Array<String> {
+        return chapters(null)
+    }
+
+    /**
+     * Returns an un-ordered list of chapter slugs in this resource container
+     *
+     * @param projectIdentifier the project who's chapters will be returned
+     * @return an array of chapter identifiers
+     */
+    @Throws(Exception::class)
+    fun chapters(projectIdentifier: String?): Array<String> {
+        val p = project(projectIdentifier) ?: return arrayOf()
+
+        val contentPath = File(dir, p.path)
+        var chapters = contentPath.list { dir, filename -> File(dir, filename).isDirectory }
+        if (chapters == null) chapters = arrayOfNulls<String>(0)
+        return chapters
+    }
+
+    /**
+     * Returns an un-ordered list of chunk slugs in the chapter
+     *
+     * @param chapterSlug the chapter who's chunks will be returned
+     * @return an array of chunk identifiers
+     */
+    @Throws(Exception::class)
+    fun chunks(chapterSlug: String): Array<String> {
+        return chunks(null, chapterSlug)
+    }
+
+    /**
+     * Returns an un-ordered list of chunk slugs in the chapter
+     *
+     * @param projectIdentifier the project who's chunks will be returned
+     * @param chapterSlug the chapter who's chunks will be returned
+     * @return an array of chunk identifiers
+     */
+    @Throws(Exception::class)
+    fun chunks(projectIdentifier: String?, chapterSlug: String): Array<String> {
+        val p = project(projectIdentifier) ?: return arrayOf()
+
+        val contentDir = File(dir, p.path)
+        val chapterDir = File(contentDir, chapterSlug)
+        val chunks = ArrayList<String>()
+        chapterDir.list { _, filename ->
+            chunks.add(filename.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0])
+            false
+        }
+        return chunks.toTypedArray()
+    }
+
+
+    /**
+     * Returns the contents of a chunk.
+     *
+     * @param chapterSlug the chapter who's chunk will be read
+     * @param chunkSlug the contents of the chunk or an empty string if it does not exist
+     * @return the chunk contents
+     */
+    @Throws(Exception::class)
+    fun readChunk(chapterSlug: String, chunkSlug: String): String {
+        return readChunk(null, chapterSlug, chunkSlug)
+    }
+
+    /**
+     * Returns the contents of a chunk.
+     *
+     * @param projectIdentifier the project who's chunk will be read
+     * @param chapterSlug the chapter who's chunk will be read
+     * @param chunkSlug the contents of the chunk or an empty string if it does not exist
+     * @return the chunk contents
+     */
+    @Throws(Exception::class)
+    fun readChunk(projectIdentifier: String?, chapterSlug: String, chunkSlug: String): String {
+        val p = project(projectIdentifier) ?: return ""
+
+        val contentDir = File(dir, p.path)
+        val chunkFile = File(File(contentDir, chapterSlug), chunkSlug + "." + chunkExt())
+        return if (chunkFile.exists() && chunkFile.isFile()) {
+            chunkFile.readText()
+        } else ""
+    }
+
+    /**
+     * Writes content to a chunk.
+     * The path will be created if it does not already exist.
+     *
+     * @param chapterIdentifier the chapter who's chunk will be written to
+     * @param chunkIdentifier the chunk that will be created
+     * @param content the content to be written to the chunk
+     * @throws Exception
+     */
+    @Throws(Exception::class)
+    fun writeChunk(chapterIdentifier: String, chunkIdentifier: String, content: String) {
+        writeChunk(null, chapterIdentifier, chunkIdentifier, content)
+    }
+
+    /**
+     * Writes content to a chunk.
+     * The path will be created if it does not already exist.
+     *
+     * @param projectIdentifier the project who's chunk will be written to
+     * @param chapterIdentifier the chapter who's chunk will be written to
+     * @param chunkIdentifier the chunk that will be created
+     * @param content the content to be written to the chunk
+     * @throws Exception
+     */
+    @Throws(Exception::class)
+    fun writeChunk(projectIdentifier: String?, chapterIdentifier: String, chunkIdentifier: String, content: String) {
+        val p = project(projectIdentifier) ?: return
+
+        val contentDir = File(dir, p.path)
+        val chunkFile = File(File(contentDir, chapterIdentifier), chunkIdentifier + "." + chunkExt())
+        if (content.isEmpty()) {
+            Files.deleteIfExists(chunkFile.toPath())
+        } else {
+            chunkFile.parentFile.mkdirs()
+            chunkFile.writeText(content)
+        }
+    }
+
+    /**
+     * Returns the file extension to use for content files (chunks)
+     * @return the extension name
+     */
+    private fun chunkExt(): String {
+        // TODO: 1/26/17 I'd rather not hard code the file extensions in here.
+        // it would be better if the library can just figure it out.
+        val defaultExt = "txt"
+        return when (manifest.dublinCore.format) {
+            "text/usx" -> "usx"
+            "text/usfm" -> "usfm"
+            "text/markdown" -> "md"
+            "audio/mp3" -> "mp3"
+            "video/mp4" -> "mp4"
+            else ->
+                // unknown format
+                defaultExt
+        }
+    }
+
+    /**
+     * Convenience method to get the type of the resource container.
+     *
+     * @return the RC type
+     */
+    inline fun type(): String = this.manifest.dublinCore.type
+
+
+    companion object {
 
         const val conformsTo = "0.2"
 
-        fun load(dir: File, strict: Boolean = true) = ResourceContainer(dir)
+        fun create(dir: File, init: ResourceContainer.() -> Unit): ResourceContainer {
+            val rc = ResourceContainer(dir)
+            rc.init()
+            if(rc.conformsTo().isNullOrEmpty()) {
+                rc.manifest.dublinCore.conformsTo = conformsTo
+            }
+            return rc
+        }
 
-//        fun create(dir: File, manifest: Map<String, Any>): ResourceContainer {
-//            if (dir.exists()) throw RCException("Resource container already exists")
-//
-//            val dc = dublincore {
-//                conformsTo = "rc$conformsTo"
-//                checking = Checking()
-//            }
-////
-//            if (manifest.containsKey("dublin_core")) {
-//                val mdc = manifest.get("dublin_code") as Map<String, Any>
-//                val requiredKeys = arrayOf("type", "format", "identifier", "language", "rights")
-//                for (key in requiredKeys) {
-//                    if (!mdc.containsKey(key) || mdc[key] == null) {
-//                        throw InvalidRCException("Missing dublin_core.$key")
-//                    }
-//                }
-//            } else {
-//                throw InvalidRCException("Missing dublin_core")
-//            }
-//
-//
-//        }
+        fun load(config: Config, dir: File, strict: Boolean = true): ResourceContainer {
+            val rc = load(dir, strict)
+            rc.config = config
+            return rc
+        }
+
+        fun load(dir: File, strict: Boolean = true): ResourceContainer {
+            val rc = ResourceContainer(dir)
+            rc.read()
+
+            if(strict) {
+                if(rc.manifest == null) {
+                    throw InvalidRCException("Missing manifest.yaml")
+                }
+                if(Semver.gt(rc.conformsTo(), conformsTo)) {
+                    throw UnsupportedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
+                }
+                if(Semver.lt(rc.conformsTo(), conformsTo)) {
+                    throw OutdatedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
+                }
+            }
+
+
+            return rc
+        }
 
     }
 }
