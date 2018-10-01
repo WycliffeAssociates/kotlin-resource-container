@@ -21,7 +21,7 @@ class ContainerUnitTest {
     fun loadSingleBookRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(resource!!.path)
+        val containerDir = File(resource!!.toURI().path)
 
         val container = ResourceContainer.load(containerDir)
 
@@ -52,7 +52,7 @@ class ContainerUnitTest {
     fun loadMultiBookRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("valid_multi_book_rc")
-        val containerDir = File(resource!!.path)
+        val containerDir = File(resource!!.toURI().path)
 
 
         val container = ResourceContainer.load(containerDir)
@@ -119,7 +119,7 @@ class ContainerUnitTest {
     fun updateRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(resource!!.path)
+        val containerDir = File(resource!!.toURI().path)
 
         val container = ResourceContainer.load(containerDir)
 
@@ -136,7 +136,7 @@ class ContainerUnitTest {
     fun createNewRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(File(resource!!.path).parentFile, "new_rc")
+        val containerDir = File(File(resource!!.toURI().path).parentFile, "new_rc")
 
         val rc = ResourceContainer.create(containerDir) {
             manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
@@ -164,7 +164,7 @@ class ContainerUnitTest {
     fun failOpeningOldRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("old_rc")
-        val containerDir = File(resource!!.path)
+        val containerDir = File(resource!!.toURI().path)
 
         try {
             val container = ResourceContainer.load(containerDir)
@@ -180,7 +180,7 @@ class ContainerUnitTest {
     fun failOpeningUnsupportedRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("unsupported_rc")
-        val containerDir = File(resource!!.path)
+        val containerDir = File(resource!!.toURI().path)
 
         try {
             val container = ResourceContainer.load(containerDir)
@@ -196,7 +196,7 @@ class ContainerUnitTest {
     fun throwErrorWhenNotSpecifyingProjectInMultiProjectRC() {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource("valid_multi_book_rc")
-        val containerDir = File(resource!!.path)
+        val containerDir = File(resource!!.toURI().path)
 
         val container = ResourceContainer.load(containerDir)
 

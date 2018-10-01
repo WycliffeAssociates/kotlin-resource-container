@@ -4,6 +4,7 @@ plugins {
 }
 
 group 'org.wycliffeassociates'
+
 version 'rc0.2'
 
 sourceCompatibility = 1.8
@@ -15,7 +16,7 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
+    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.6"
     compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.6'
     compile 'com.esotericsoftware.yamlbeans:yamlbeans:1.09'
 
