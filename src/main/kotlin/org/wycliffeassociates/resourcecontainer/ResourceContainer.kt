@@ -19,13 +19,11 @@ import java.util.*
 
 
 interface Config {
-    fun read(dir: File): Config
-    fun write(dir: File)
+    fun read(configFile: File): Config
+    fun write(configFile: File)
 }
 
-class ResourceContainer private constructor(val dir: File) {
-
-    var config: Config? = null
+class ResourceContainer private constructor(val dir: File, var config: Config? = null) {
 
     lateinit var manifest: Manifest
 
@@ -355,14 +353,12 @@ class ResourceContainer private constructor(val dir: File) {
             return rc
         }
 
-        fun load(config: Config, dir: File, strict: Boolean = true): ResourceContainer {
-            val rc = load(dir, strict)
-            rc.config = config
-            return rc
-        }
+        fun load( dir: File, config: Config, strict: Boolean = true): ResourceContainer =
+            load(dir, strict, config)
 
-        fun load(dir: File, strict: Boolean = true): ResourceContainer {
-            val rc = ResourceContainer(dir)
+
+        fun load(dir: File, strict: Boolean = true, config: Config? = null): ResourceContainer {
+            val rc = ResourceContainer(dir, config)
             rc.read()
 
             if(strict) {
