@@ -1,8 +1,10 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import org.wycliffeassociates.resourcecontainer.Config
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 data class Project(
         var title: String = "",

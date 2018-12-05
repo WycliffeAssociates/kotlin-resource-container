@@ -1,5 +1,8 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class Source(
         var identifier: String = "",
         var language: String = "",
