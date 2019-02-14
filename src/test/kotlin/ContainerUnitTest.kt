@@ -13,7 +13,8 @@ import java.io.File
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
 class ContainerUnitTest {
-    @Rule @JvmField
+    @Rule
+    @JvmField
     var resourceDir = TemporaryFolder()
 
     @Test
@@ -23,7 +24,7 @@ class ContainerUnitTest {
         val resource = classLoader.getResource("valid_single_book_rc")
         val containerDir = File(resource!!.toURI().path)
 
-        val container = ResourceContainer.load(containerDir)
+        val container = ResourceContainer.load(containerDir) as DirResourceContainer
 
         assertNotNull(container)
         assertEquals(4, container.chapters().size)
@@ -55,7 +56,7 @@ class ContainerUnitTest {
         val containerDir = File(resource!!.toURI().path)
 
 
-        val container = ResourceContainer.load(containerDir)
+        val container = ResourceContainer.load(containerDir) as DirResourceContainer
 
         assertNotNull(container)
 
@@ -93,16 +94,37 @@ class ContainerUnitTest {
 
     @Test
     @Throws(Exception::class)
-    fun failToLoadMissingRC() {
-        val containerDir = File("missing_rc")
+    fun failToLoadInvalidFileRC() {
+        val containerDir = File("invalid_rc")
 
         try {
             val container = ResourceContainer.load(containerDir)
             assertNull(container)
         } catch (e: Exception) {
-            assertEquals("Missing manifest.yaml", e.message)
+            assertEquals("Invalid container directory or zip file", e.message)
         }
+    }
 
+    private val failToLoadMissingManifestCases = listOf(
+            "missing_manifest",
+            "missing_manifest.zip"
+    )
+
+    @Test
+    @Throws(Exception::class)
+    fun failToLoadMissingManifest() {
+        failToLoadMissingManifestCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
+
+            try {
+                val container = ResourceContainer.load(containerDir)
+                assertNull(container)
+            } catch (e: Exception) {
+                assertEquals("Missing manifest.yaml", e.message)
+            }
+        }
     }
 
     @Test
@@ -121,7 +143,7 @@ class ContainerUnitTest {
         val resource = classLoader.getResource("valid_single_book_rc")
         val containerDir = File(resource!!.toURI().path)
 
-        val container = ResourceContainer.load(containerDir)
+        val container = ResourceContainer.load(containerDir) as DirResourceContainer
 
         assertNotNull(container)
         assertEquals("Titus", container.readChunk("front", "title").trim())
@@ -138,7 +160,7 @@ class ContainerUnitTest {
         val resource = classLoader.getResource("valid_single_book_rc")
         val containerDir = File(File(resource!!.toURI().path).parentFile, "new_rc")
 
-        val rc = ResourceContainer.create(containerDir) {
+        val rc = DirResourceContainer.create(containerDir) {
             manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
                 dublinCore = dublincore {
                     type = "book"
@@ -159,36 +181,48 @@ class ContainerUnitTest {
         assertEquals("book", rc.type())
     }
 
+    private val failOpeningOldRCCases = listOf(
+            "old_rc",
+            "old_rc.zip"
+    )
+
     @Test
     @Throws(Exception::class)
     fun failOpeningOldRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("old_rc")
-        val containerDir = File(resource!!.toURI().path)
+        failOpeningOldRCCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        try {
-            val container = ResourceContainer.load(containerDir)
-            assertNull(container)
-        } catch (e: OutdatedRCException) {
-            assertEquals("Found 0.1 but expected " + ResourceContainer.conformsTo, e.message)
+            try {
+                val container = ResourceContainer.load(containerDir)
+                assertNull(container)
+            } catch (e: OutdatedRCException) {
+                assertEquals("Found 0.1 but expected " + ResourceContainer.conformsTo, e.message)
+            }
         }
-
     }
+
+    private val failOpeningUnsupportedRCCases = listOf(
+            "unsupported_rc",
+            "unsupported_rc.zip"
+    )
 
     @Test
     @Throws(Exception::class)
     fun failOpeningUnsupportedRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("unsupported_rc")
-        val containerDir = File(resource!!.toURI().path)
+        failOpeningUnsupportedRCCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        try {
-            val container = ResourceContainer.load(containerDir)
-            assertNull(container)
-        } catch (e: UnsupportedRCException) {
-            assertEquals("Found 9999990.1 but expected " + ResourceContainer.conformsTo, e.message)
+            try {
+                val container = ResourceContainer.load(containerDir)
+                assertNull(container)
+            } catch (e: UnsupportedRCException) {
+                assertEquals("Found 9999990.1 but expected " + ResourceContainer.conformsTo, e.message)
+            }
         }
-
     }
 
     @Test
@@ -198,7 +232,7 @@ class ContainerUnitTest {
         val resource = classLoader.getResource("valid_multi_book_rc")
         val containerDir = File(resource!!.toURI().path)
 
-        val container = ResourceContainer.load(containerDir)
+        val container = ResourceContainer.load(containerDir) as DirResourceContainer
 
         try {
             container.chapters()
