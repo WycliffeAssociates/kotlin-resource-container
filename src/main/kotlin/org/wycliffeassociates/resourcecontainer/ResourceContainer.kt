@@ -11,190 +11,64 @@ import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.*
+import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
-import java.util.zip.ZipOutputStream
 
-const val MANIFEST_FILENAME = "manifest.yaml"
-const val CONFIG_FILENAME = "config.yaml"
 
 interface Config {
-    fun read(br: BufferedReader): Config
-    fun write(bw: BufferedWriter)
+    fun read(configFile: File): Config
+    fun write(configFile: File)
 }
 
-interface IResourceContainerAccessor {
-    fun read()
-    fun write()
-    fun writeManifest()
-    fun writeTableOfContents(projectId: String)
-    fun checkFileExists(file: File): Boolean
-    fun writeConfig(configFile: File, config: Config)
-}
-
-class ResourceContainer private constructor(val file: File, var config: Config? = null) {
+class ResourceContainer private constructor(val dir: File, var config: Config? = null) {
 
     lateinit var manifest: Manifest
-    private val accessor: IResourceContainerAccessor = when (file.extension) { // TODO: Check
-        "zip" -> ZipAccessor()
-        else -> DirAccessor()
-    }
 
-    inner class ZipAccessor : IResourceContainerAccessor {
-        private val zipFile = ZipFile(file)
-
-        init {
-            if (!checkFilenameExists(MANIFEST_FILENAME)) {
-                throw IOException("Missing manifest.yaml") // TODO: Check one level down too
+    private fun read(): Manifest {
+        val manifestFile = File(dir, "manifest.yaml")
+        if (manifestFile.exists()) {
+            val mapper = ObjectMapper(YAMLFactory())
+            mapper.registerModule(KotlinModule())
+            manifest = manifestFile.bufferedReader().use {
+                mapper.readValue(it, Manifest::class.java)
             }
-        }
-
-        private fun checkFilenameExists(filename: String): Boolean {
-            return zipFile.getEntry(filename) != null
-        }
-
-        override fun checkFileExists(file: File): Boolean {
-            return checkFilenameExists(file.name)
-        }
-
-        override fun read() {
-            read(zipFile.getInputStream(zipFile.getEntry(MANIFEST_FILENAME)).bufferedReader()) {
-                zipFile.getEntry(CONFIG_FILENAME)?.let {
-                    zipFile.getInputStream(it).bufferedReader()
+            config?.let {
+                val configFile = File(dir, "config.yaml")
+                if(configFile.exists()) {
+                    this.config = it.read(configFile)
                 }
             }
+            return manifest
+        } else {
+            throw IOException("Missing manifest.yaml")
         }
-
-        override fun writeTableOfContents(projectId: String) {
-            writeZipEntry(zipFile, "tableOfContents.txt") { bufferedWriter ->
-                TODO("not implemented")
-            }
-        }
-
-        override fun write() {
-            // Don't need to create the directory, the zip file will be
-            // created when the manifest is written
-            writeManifest()
-        }
-
-        override fun writeManifest() {
-            writeZipEntry(zipFile, MANIFEST_FILENAME) { bufferedWriter ->
-                writeManifest(bufferedWriter)
-            }
-        }
-
-        override fun writeConfig(configFile: File, config: Config) {
-            writeZipEntry(zipFile, CONFIG_FILENAME) { bufferedWriter ->
-                config.write(bufferedWriter)
-            }
-        }
-
-        private fun writeZipEntry(currentZip: ZipFile, filename: String, writeFcn: (BufferedWriter) -> Unit) {
-            val zos = ZipOutputStream(FileOutputStream("temp.zip")) // TODO
-            currentZip.entries().iterator().forEach {
-                if (it.name == filename) {
-                    zos.putNextEntry(ZipEntry(filename))
-                    writeFcn(zos.bufferedWriter())
-                } else {
-                    zos.putNextEntry(it)
-                    currentZip.getInputStream(it).copyTo(zos)
-                }
-                try {
-                    zos.closeEntry()
-                } catch (e: IOException) {
-                    println(e)
-                }
-            }
-            zos.close()
-        }
-    }
-
-    inner class DirAccessor : IResourceContainerAccessor {
-        init {
-            if (!File(file, MANIFEST_FILENAME).exists()) {
-                throw IOException("Missing manifest.yaml")
-            }
-        }
-
-        override fun checkFileExists(file: File): Boolean {
-            return file.exists()
-        }
-
-        override fun read() {
-            read(File(file, MANIFEST_FILENAME).bufferedReader()) {
-                val configFile = File(file, CONFIG_FILENAME)
-                when (configFile.exists()) {
-                    true -> configFile.bufferedReader()
-                    false -> null
-                }
-            }
-        }
-
-        override fun writeTableOfContents(projectId: String) {
-            TODO("not implemented")
-        }
-
-        override fun write() {
-            file.mkdirs()
-            writeManifest()
-        }
-
-        override fun writeManifest() {
-            file.mkdirs()
-            writeManifest(File(file, MANIFEST_FILENAME).bufferedWriter())
-        }
-
-        override fun writeConfig(configFile: File, config: Config) {
-            config.write(configFile.bufferedWriter())
-        }
-    }
-
-    fun read() {
-        accessor.read()
-    }
-
-    private fun read(
-            brManifest: BufferedReader,
-            configReaderGetter: () -> BufferedReader?
-    ): Manifest {
-        val mapper = ObjectMapper(YAMLFactory())
-        mapper.registerModule(KotlinModule())
-        manifest = brManifest.use {
-            mapper.readValue(it, Manifest::class.java)
-        }
-
-        config?.let {
-            configReaderGetter()?.let { brConfig ->
-                this.config = it.read(brConfig)
-            }
-        }
-        return manifest
     }
 
     fun write() {
-        accessor.write()
+        dir.mkdirs()
+        writeManifest()
         for (p in manifest.projects) {
-            if (!p.path.isNullOrEmpty()) {
-                // TODO 2/25/19: This was commented out before
+            if(!p.path.isNullOrEmpty()) {
                 //writeTableOfContents(p)
             }
         }
     }
 
     fun writeManifest() {
-        accessor.writeManifest()
+        dir.mkdirs()
+        writeManifest(File(dir, "manifest.yaml"))
     }
 
-    private fun writeManifest(bw: BufferedWriter) {
+    private fun writeManifest(out: File) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        bw.write("Hello2") // TODO
-        mapper.writeValue(bw, manifest)
+        val manifestFile = out.bufferedWriter().use {
+            mapper.writeValue(it, manifest)
+        }
     }
 
     fun writeTableOfContents(projectId: String) {
@@ -206,24 +80,24 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
 
     fun writeConfig() {
         config?.let {
-            val configFile = File(file, CONFIG_FILENAME)
-            if (accessor.checkFileExists(configFile)) {
-                accessor.writeConfig(configFile, it)
+            val configFile = File(dir, "config.yaml")
+            if(configFile.exists()) {
+                it.write(configFile)
             }
         }
     }
 
     fun writeTableOfContents(project: Project) {
-        file.mkdirs()
-        writeTableOfContents(File(file, project.path).bufferedWriter(), project)
+        dir.mkdirs()
+        writeTableOfContents(File(dir, project.path), project)
     }
 
-    private fun writeTableOfContents(bw: BufferedWriter, project: Project) {
+    private fun writeTableOfContents(out: File, project: Project) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
         mapper.setSerializationInclusion(Include.NON_EMPTY)
-        bw.use {
+        out.bufferedWriter().use {
             mapper.writeValue(it, project)
         }
     }
@@ -296,7 +170,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun toc(identifier: String?): TableOfContents? {
         val pj = project(identifier)
         pj?.let {
-            val contentDir = File(file, Paths.get(pj.path).fileName.toString())
+            val contentDir = File(dir, Paths.get(pj.path).fileName.toString())
             val tocFile = File(contentDir, "toc.yaml")
             if (tocFile.exists()) {
                 val mapper = ObjectMapper(YAMLFactory())
@@ -330,7 +204,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun chapters(projectIdentifier: String?): Array<String> {
         val p = project(projectIdentifier) ?: return arrayOf()
 
-        val contentPath = File(file, p.path)
+        val contentPath = File(dir, p.path)
         var chapters = contentPath.list { dir, filename -> File(dir, filename).isDirectory }
         if (chapters == null) chapters = arrayOfNulls<String>(0)
         return chapters
@@ -358,7 +232,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun chunks(projectIdentifier: String?, chapterSlug: String): Array<String> {
         val p = project(projectIdentifier) ?: return arrayOf()
 
-        val contentDir = File(file, p.path)
+        val contentDir = File(dir, p.path)
         val chapterDir = File(contentDir, chapterSlug)
         val chunks = ArrayList<String>()
         chapterDir.list { _, filename ->
@@ -393,7 +267,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun readChunk(projectIdentifier: String?, chapterSlug: String, chunkSlug: String): String {
         val p = project(projectIdentifier) ?: return ""
 
-        val contentDir = File(file, p.path)
+        val contentDir = File(dir, p.path)
         val chunkFile = File(File(contentDir, chapterSlug), chunkSlug + "." + chunkExt())
         return if (chunkFile.exists() && chunkFile.isFile()) {
             chunkFile.readText()
@@ -428,7 +302,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun writeChunk(projectIdentifier: String?, chapterIdentifier: String, chunkIdentifier: String, content: String) {
         val p = project(projectIdentifier) ?: return
 
-        val contentDir = File(file, p.path)
+        val contentDir = File(dir, p.path)
         val chunkFile = File(File(contentDir, chapterIdentifier), chunkIdentifier + "." + chunkExt())
         if (content.isEmpty()) {
             Files.deleteIfExists(chunkFile.toPath())
@@ -470,33 +344,35 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
 
         const val conformsTo = "0.2"
 
-        fun create(file: File, init: ResourceContainer.() -> Unit): ResourceContainer {
-            val rc = ResourceContainer(file)
+        fun create(dir: File, init: ResourceContainer.() -> Unit): ResourceContainer {
+            val rc = ResourceContainer(dir)
             rc.init()
-            if (rc.conformsTo().isNullOrEmpty()) {
+            if(rc.conformsTo().isNullOrEmpty()) {
                 rc.manifest.dublinCore.conformsTo = conformsTo
             }
             return rc
         }
 
-        fun load(file: File, config: Config, strict: Boolean = true): ResourceContainer =
-                load(file, strict, config)
+        fun load( dir: File, config: Config, strict: Boolean = true): ResourceContainer =
+            load(dir, strict, config)
 
-        fun load(file: File, strict: Boolean = true, config: Config? = null): ResourceContainer {
-            val rc = ResourceContainer(file, config)
+
+        fun load(dir: File, strict: Boolean = true, config: Config? = null): ResourceContainer {
+            val rc = ResourceContainer(dir, config)
             rc.read()
 
-            if (strict) {
-                if (rc.manifest == null) {
+            if(strict) {
+                if(rc.manifest == null) {
                     throw InvalidRCException("Missing manifest.yaml")
                 }
-                if (Semver.gt(rc.conformsTo(), conformsTo)) {
+                if(Semver.gt(rc.conformsTo(), conformsTo)) {
                     throw UnsupportedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
                 }
-                if (Semver.lt(rc.conformsTo(), conformsTo)) {
+                if(Semver.lt(rc.conformsTo(), conformsTo)) {
                     throw OutdatedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
                 }
             }
+
 
             return rc
         }
