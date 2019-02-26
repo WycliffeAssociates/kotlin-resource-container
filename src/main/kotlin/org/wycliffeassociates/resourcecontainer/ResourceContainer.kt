@@ -11,34 +11,38 @@ import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.File
-import java.io.IOException
+import java.io.*
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 
+const val MANIFEST_FILENAME = "manifest.yaml"
+const val CONFIG_FILENAME = "config.yaml"
+const val TOC_FILENAME = "toc.yaml"
 
 interface Config {
-    fun read(configFile: File): Config
-    fun write(configFile: File)
+    fun read(br: BufferedReader): Config
+    fun write(bw: BufferedWriter)
 }
 
-class ResourceContainer private constructor(val dir: File, var config: Config? = null) {
+class ResourceContainer private constructor(val file: File, var config: Config? = null) {
 
     lateinit var manifest: Manifest
+    private val accessor: IResourceContainerAccessor = when (file.extension) { // TODO: Check
+        "zip" -> ZipAccessor(file)
+        else -> DirAccessor(file)
+    }
 
     private fun read(): Manifest {
-        val manifestFile = File(dir, "manifest.yaml")
-        if (manifestFile.exists()) {
+        if (accessor.checkFileExists(MANIFEST_FILENAME)) {
             val mapper = ObjectMapper(YAMLFactory())
             mapper.registerModule(KotlinModule())
-            manifest = manifestFile.bufferedReader().use {
+            manifest = accessor.getReader(MANIFEST_FILENAME).use {
                 mapper.readValue(it, Manifest::class.java)
             }
             config?.let {
-                val configFile = File(dir, "config.yaml")
-                if(configFile.exists()) {
-                    this.config = it.read(configFile)
+                if (accessor.checkFileExists(CONFIG_FILENAME)) {
+                    this.config = it.read(accessor.getReader(CONFIG_FILENAME))
                 }
             }
             return manifest
@@ -48,7 +52,6 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     }
 
     fun write() {
-        dir.mkdirs()
         writeManifest()
         for (p in manifest.projects) {
             if(!p.path.isNullOrEmpty()) {
@@ -58,15 +61,15 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     }
 
     fun writeManifest() {
-        dir.mkdirs()
-        writeManifest(File(dir, "manifest.yaml"))
+        accessor.initWrite()
+        accessor.write(MANIFEST_FILENAME) { writeManifest(it) }
     }
 
-    private fun writeManifest(out: File) {
+    private fun writeManifest(bw: BufferedWriter) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        val manifestFile = out.bufferedWriter().use {
+        bw.use {
             mapper.writeValue(it, manifest)
         }
     }
@@ -79,25 +82,25 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     }
 
     fun writeConfig() {
-        config?.let {
-            val configFile = File(dir, "config.yaml")
-            if(configFile.exists()) {
-                it.write(configFile)
+        config?.let { config ->
+            if (accessor.checkFileExists(CONFIG_FILENAME)) {
+                accessor.write(CONFIG_FILENAME) { config.write(it) }
             }
         }
     }
 
     fun writeTableOfContents(project: Project) {
-        dir.mkdirs()
-        writeTableOfContents(File(dir, project.path), project)
+        accessor.initWrite()
+        accessor.write(project.path) { writeTableOfContents(it, project) }
+        // TODO: If file/project.path doesn't exist, it won't be created in the zip implementation
     }
 
-    private fun writeTableOfContents(out: File, project: Project) {
+    private fun writeTableOfContents(bw: BufferedWriter, project: Project) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
         mapper.setSerializationInclusion(Include.NON_EMPTY)
-        out.bufferedWriter().use {
+        bw.use {
             mapper.writeValue(it, project)
         }
     }
@@ -167,22 +170,21 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
         return toc(null)
     }
 
+    // TODO
     fun toc(identifier: String?): TableOfContents? {
         val pj = project(identifier)
         pj?.let {
-            val contentDir = File(dir, Paths.get(pj.path).fileName.toString())
-            val tocFile = File(contentDir, "toc.yaml")
-            if (tocFile.exists()) {
+            val contentDirname = Paths.get(pj.path).fileName.toString()
+            if (accessor.checkFileExists(TOC_FILENAME, contentDirname)) {
                 val mapper = ObjectMapper(YAMLFactory())
                 mapper.registerModule(KotlinModule())
-                return tocFile.bufferedReader().use {
+                return accessor.getReader(TOC_FILENAME, contentDirname).use {
                     mapper.readValue(it, TableOfContents::class.java)
                 }
             }
         }
         return null
     }
-
 
     /**
      * Returns an un-ordered list of chapter slugs in this resource container
@@ -204,7 +206,7 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     fun chapters(projectIdentifier: String?): Array<String> {
         val p = project(projectIdentifier) ?: return arrayOf()
 
-        val contentPath = File(dir, p.path)
+        val contentPath = File(file, p.path)
         var chapters = contentPath.list { dir, filename -> File(dir, filename).isDirectory }
         if (chapters == null) chapters = arrayOfNulls<String>(0)
         return chapters
@@ -232,7 +234,7 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     fun chunks(projectIdentifier: String?, chapterSlug: String): Array<String> {
         val p = project(projectIdentifier) ?: return arrayOf()
 
-        val contentDir = File(dir, p.path)
+        val contentDir = File(file, p.path)
         val chapterDir = File(contentDir, chapterSlug)
         val chunks = ArrayList<String>()
         chapterDir.list { _, filename ->
@@ -267,7 +269,7 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     fun readChunk(projectIdentifier: String?, chapterSlug: String, chunkSlug: String): String {
         val p = project(projectIdentifier) ?: return ""
 
-        val contentDir = File(dir, p.path)
+        val contentDir = File(file, p.path)
         val chunkFile = File(File(contentDir, chapterSlug), chunkSlug + "." + chunkExt())
         return if (chunkFile.exists() && chunkFile.isFile()) {
             chunkFile.readText()
@@ -302,7 +304,7 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
     fun writeChunk(projectIdentifier: String?, chapterIdentifier: String, chunkIdentifier: String, content: String) {
         val p = project(projectIdentifier) ?: return
 
-        val contentDir = File(dir, p.path)
+        val contentDir = File(file, p.path)
         val chunkFile = File(File(contentDir, chapterIdentifier), chunkIdentifier + "." + chunkExt())
         if (content.isEmpty()) {
             Files.deleteIfExists(chunkFile.toPath())
@@ -344,8 +346,8 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
 
         const val conformsTo = "0.2"
 
-        fun create(dir: File, init: ResourceContainer.() -> Unit): ResourceContainer {
-            val rc = ResourceContainer(dir)
+        fun create(file: File, init: ResourceContainer.() -> Unit): ResourceContainer {
+            val rc = ResourceContainer(file)
             rc.init()
             if(rc.conformsTo().isNullOrEmpty()) {
                 rc.manifest.dublinCore.conformsTo = conformsTo
@@ -355,7 +357,6 @@ class ResourceContainer private constructor(val dir: File, var config: Config? =
 
         fun load( dir: File, config: Config, strict: Boolean = true): ResourceContainer =
             load(dir, strict, config)
-
 
         fun load(dir: File, strict: Boolean = true, config: Config? = null): ResourceContainer {
             val rc = ResourceContainer(dir, config)
