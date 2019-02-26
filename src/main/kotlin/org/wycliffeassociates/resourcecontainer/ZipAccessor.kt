@@ -44,20 +44,34 @@ class ZipAccessor(file: File) : IResourceContainerAccessor {
 
     override fun write(filename: String, dirname: String?, writeFcn: (BufferedWriter) -> Unit) {
         val zos = ZipOutputStream(FileOutputStream("temp.zip")) // TODO
+        var found = false
         zipFile.entries().iterator().forEach {
             if (it.name == filename) {
-                zos.putNextEntry(ZipEntry(filename))
-                writeFcn(zos.bufferedWriter())
+                zos.write(ZipEntry(filename), writeFcn)
+                found = true
             } else {
                 zos.putNextEntry(it)
                 zipFile.getInputStream(it).copyTo(zos)
             }
-            try {
-                zos.closeEntry()
-            } catch (e: IOException) {
-                println(e)
-            }
+            zos.tryCloseEntry()
+        }
+        if (!found) {
+            zos.write(ZipEntry(filename), writeFcn)
+            zos.tryCloseEntry()
         }
         zos.close()
+    }
+
+    private fun ZipOutputStream.write(zipEntry: ZipEntry, writeFcn: (BufferedWriter) -> Unit) {
+        putNextEntry(zipEntry)
+        writeFcn(bufferedWriter())
+    }
+
+    private fun ZipOutputStream.tryCloseEntry() {
+        try {
+            closeEntry()
+        } catch (e: IOException) {
+            println(e)
+        }
     }
 }
