@@ -10,39 +10,21 @@ import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
 class ZipAccessor(file: File) : IResourceContainerAccessor {
-
     private val zipFile = ZipFile(file)
 
-    init {
-        if (!checkFileExists(MANIFEST_FILENAME)) {
-            throw IOException("Missing manifest.yaml") // TODO: Check one level down too
-        }
+    override fun getReader(filename: String): BufferedReader {
+            return zipFile.getInputStream(zipFile.getEntry(filename)).bufferedReader()
     }
 
-    private fun <T> performAction(filename: String, dirname: String?, action: (ZipEntry) -> T): T {
-        return when (dirname) {
-            null -> filename
-            else -> "$dirname/$filename"
-        }.run { action(zipFile.getEntry(this)) }
-    }
-
-    override fun getReader(filename: String, dirname: String?): BufferedReader {
-        return performAction(filename, dirname) {
-            zipFile.getInputStream(zipFile.getEntry(filename)).bufferedReader()
-        }
-    }
-
-    override fun checkFileExists(filename: String, dirname: String?): Boolean {
-        return performAction(filename, dirname) {
-            zipFile.getEntry(filename) != null
-        }
+    override fun checkFileExists(filename: String): Boolean {
+            return zipFile.entries().toList().map{it.name}.contains(filename)
     }
 
     override fun initWrite() {
         // noop
     }
 
-    override fun write(filename: String, dirname: String?, writeFcn: (BufferedWriter) -> Unit) {
+    override fun write(filename: String, writeFcn: (BufferedWriter) -> Unit) {
         val zos = ZipOutputStream(FileOutputStream("temp.zip")) // TODO
         var found = false
         zipFile.entries().iterator().forEach {

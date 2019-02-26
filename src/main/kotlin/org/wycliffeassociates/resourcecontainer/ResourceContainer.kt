@@ -178,7 +178,6 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
                 }
             }
 
-
             return rc
         }
 
