@@ -8,6 +8,8 @@ import org.wycliffeassociates.resourcecontainer.entity.dublincore
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
 import java.io.File
+import java.nio.file.Files
+import java.util.zip.ZipFile
 
 /**
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
@@ -84,17 +86,28 @@ class ContainerUnitTest {
         assertNotNull(container)
     }
 
+    private val overwriteRcTestCases = listOf(
+            "overwrite_manifest_rc",
+            "overwrite_manifest_rc.zip"
+    )
+
     @Test
     @Throws(Exception::class)
-    fun createNewRC() {
+    fun overwriteManifest() {
         val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(File(resource!!.toURI().path).parentFile, "new_rc")
+        overwriteRcTestCases.forEach {
+            val resource = classLoader.getResource(it)
+            val containerFile = File(resource!!.toURI().path)
 
-        val rc = ResourceContainer.create(containerDir) {
-            manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
+            val rc = ResourceContainer.load(containerFile)
+
+            assertNotNull(rc)
+            assertEquals(ResourceContainer.conformsTo, rc.conformsTo())
+            assertEquals("book", rc.type())
+
+            rc.manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
                 dublinCore = dublincore {
-                    type = "book"
+                    type = "testType"
                     format = "text/usfm"
                     identifier = "en-me"
                     rights = "CC BY-SA 4.0"
@@ -105,11 +118,77 @@ class ContainerUnitTest {
                     }
                 }
             }
-        }
 
-        assertNotNull(rc)
-        assertEquals(ResourceContainer.conformsTo, rc.conformsTo())
-        assertEquals("book", rc.type())
+            assertNotNull(rc)
+            assertEquals("testType", rc.type())
+
+            try {
+                rc.writeManifest()
+                val loaded = ResourceContainer.load(containerFile, strict = false)
+                assertNotNull(loaded)
+                assertEquals("testType", loaded.type())
+            } finally {
+                if (containerFile.isDirectory) {
+                    containerFile.deleteRecursively() // For directory
+                } else {
+                    Files.delete(containerFile.toPath())
+//                    ZipFile(containerFile).close()
+//                    containerFile.delete() // For zip file TODO this doesn't work!
+                }
+            }
+        }
+    }
+
+    private val createNewRcTestCases = listOf(
+            "new_rc",
+            "new_rc.zip"
+    )
+
+    @Test
+    @Throws(Exception::class)
+    fun createNewRC() {
+        val classLoader = this.javaClass.classLoader
+        val resource = classLoader.getResource("valid_single_book_rc")
+
+        createNewRcTestCases.forEach {
+            val containerFile = File(File(resource!!.toURI().path).parentFile, it)
+
+            val rc = ResourceContainer.create(containerFile) {
+                manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
+                    dublinCore = dublincore {
+                        type = "book"
+                        format = "text/usfm"
+                        identifier = "en-me"
+                        rights = "CC BY-SA 4.0"
+                        language = org.wycliffeassociates.resourcecontainer.entity.language {
+                            identifier = "en"
+                            title = "English"
+                            direction = "ltr"
+                        }
+                    }
+                }
+            }
+
+            assertNotNull(rc)
+            assertEquals(ResourceContainer.conformsTo, rc.conformsTo())
+            assertEquals("book", rc.type())
+
+            try {
+                rc.write()
+                val loaded = ResourceContainer.load(containerFile)
+                assertNotNull(loaded)
+                assertEquals(ResourceContainer.conformsTo, loaded.conformsTo())
+                assertEquals("book", loaded.type())
+            } finally {
+                if (containerFile.isDirectory) {
+                    containerFile.deleteRecursively() // For directory
+                } else {
+                    Files.delete(containerFile.toPath())
+//                    ZipFile(containerFile).close()
+//                    containerFile.delete() // For zip file TODO this doesn't work!
+                }
+            }
+        }
     }
 
     private val failOpeningOldRCCases = listOf(

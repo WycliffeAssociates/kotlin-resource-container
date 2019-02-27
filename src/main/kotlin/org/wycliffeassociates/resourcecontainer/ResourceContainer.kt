@@ -23,7 +23,7 @@ interface Config {
 class ResourceContainer private constructor(val file: File, var config: Config? = null) {
 
     lateinit var manifest: Manifest
-    private val accessor: IResourceContainerAccessor = when (file.extension) { // TODO: Check
+    private val accessor: IResourceContainerAccessor = when (file.extension) {
         "zip" -> ZipAccessor(file)
         else -> DirAccessor(file)
     }
