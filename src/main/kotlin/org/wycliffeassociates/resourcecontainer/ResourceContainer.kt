@@ -10,17 +10,14 @@ import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.File
-import java.io.IOException
+import java.io.*
 
 const val MANIFEST_FILENAME = "manifest.yaml"
 const val CONFIG_FILENAME = "config.yaml"
 
 interface Config {
-    fun read(br: BufferedReader): Config
-    fun write(bw: BufferedWriter)
+    fun read(reader: Reader): Config
+    fun write(writer: Writer)
 }
 
 class ResourceContainer private constructor(val file: File, var config: Config? = null) {
@@ -63,7 +60,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MANIFEST_FILENAME) { writeManifest(it) }
     }
 
-    private fun writeManifest(bw: BufferedWriter) {
+    private fun writeManifest(bw: Writer) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)

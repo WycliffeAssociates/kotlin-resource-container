@@ -1,11 +1,11 @@
 package org.wycliffeassociates.resourcecontainer
 
-import java.io.BufferedReader
-import java.io.BufferedWriter
 import java.io.File
+import java.io.Reader
+import java.io.Writer
 
 class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor {
-    override fun getReader(filename: String): BufferedReader {
+    override fun getReader(filename: String): Reader {
         return getFile(filename).bufferedReader()
     }
 
@@ -19,7 +19,7 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
         rootDir.mkdirs()
     }
 
-    override fun write(filename: String, writeFunction: (BufferedWriter) -> Unit) {
+    override fun write(filename: String, writeFunction: (Writer) -> Unit) {
         writeFunction(getFile(filename).bufferedWriter())
     }
 }

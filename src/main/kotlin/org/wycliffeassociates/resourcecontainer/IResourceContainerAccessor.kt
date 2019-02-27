@@ -1,11 +1,11 @@
 package org.wycliffeassociates.resourcecontainer
 
-import java.io.BufferedReader
-import java.io.BufferedWriter
+import java.io.Reader
+import java.io.Writer
 
 interface IResourceContainerAccessor {
     fun fileExists(filename: String): Boolean
-    fun getReader(filename: String): BufferedReader
+    fun getReader(filename: String): Reader
     fun initWrite()
-    fun write(filename: String, writeFunction: (BufferedWriter) -> Unit)
+    fun write(filename: String, writeFunction: (Writer) -> Unit)
 }

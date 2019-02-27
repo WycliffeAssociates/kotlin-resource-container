@@ -1,10 +1,6 @@
 package org.wycliffeassociates.resourcecontainer
 
-import java.io.File
-import java.io.IOException
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.FileOutputStream
+import java.io.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -23,7 +19,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
     }
 
     @Synchronized
-    override fun getReader(filename: String): BufferedReader {
+    override fun getReader(filename: String): Reader {
         return openZipFile()
                 .getInputStream(openZipFile().getEntry(filename))
                 .bufferedReader()
@@ -43,7 +39,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
     }
 
     @Synchronized
-    override fun write(filename: String, writeFunction: (BufferedWriter) -> Unit) {
+    override fun write(filename: String, writeFunction: (Writer) -> Unit) {
         val doCopy = file.exists()
         val dest = when (doCopy) {
             true -> File.createTempFile("otter", ".zip", file.parentFile)
