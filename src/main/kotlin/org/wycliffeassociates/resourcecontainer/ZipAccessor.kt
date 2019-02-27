@@ -18,14 +18,12 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
         _zipFile = null
     }
 
-    @Synchronized
     override fun getReader(filename: String): Reader {
         return openZipFile()
                 .getInputStream(openZipFile().getEntry(filename))
                 .bufferedReader()
     }
 
-    @Synchronized
     override fun fileExists(filename: String): Boolean {
         return openZipFile()
                 .entries()
@@ -38,7 +36,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
         // noop
     }
 
-    @Synchronized
+    /** Thread safety warning: This is NOT thread safe, and additionally, write() will close any open Readers. */
     override fun write(filename: String, writeFunction: (Writer) -> Unit) {
         val doCopy = file.exists()
         val dest = when (doCopy) {
@@ -50,7 +48,8 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
             if (doCopy) {
                 openZipFile().entries().iterator().forEach {
                     if (it.name == filename) {
-                        zos.write(ZipEntry(filename), writeFunction)
+                        zos.putNextEntry(ZipEntry(filename))
+                        writeFunction(zos.bufferedWriter())
                         found = true
                     } else {
                         // Simply doing zos.putNextEntry(it) resulted in ZipExceptions - invalid entry
@@ -58,12 +57,12 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
                         val destEntry = ZipEntry(it.name)
                         zos.putNextEntry(destEntry)
                         openZipFile().getInputStream(destEntry).use { inStream -> inStream.copyTo(zos) }
-                        zos.tryCloseEntry()
                     }
                 }
             }
             if (!found) {
-                zos.write(ZipEntry(filename), writeFunction)
+                zos.putNextEntry(ZipEntry(filename))
+                writeFunction(zos.bufferedWriter())
             }
         }
         if (doCopy) {
@@ -76,17 +75,5 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
     override fun close() {
         closeZipFile()
     }
-}
 
-private fun ZipOutputStream.write(zipEntry: ZipEntry, writeFcn: (BufferedWriter) -> Unit) {
-    putNextEntry(zipEntry)
-    writeFcn(bufferedWriter())
-    tryCloseEntry()
-}
-
-private fun ZipOutputStream.tryCloseEntry() {
-    try {
-        closeEntry()
-    } catch (e: IOException) {
-    }
 }
