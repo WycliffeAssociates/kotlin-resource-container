@@ -4,7 +4,7 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
 
-class DirAccessor(private val file: File) : IResourceContainerAccessor {
+class DirectoryAccessor(private val file: File) : IResourceContainerAccessor {
     override fun getReader(filename: String): BufferedReader {
         return getFile(filename).bufferedReader()
     }

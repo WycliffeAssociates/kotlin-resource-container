@@ -5,7 +5,6 @@ import java.io.IOException
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.FileOutputStream
-import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -63,13 +62,12 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
                         val destEntry = ZipEntry(it.name)
                         zos.putNextEntry(destEntry)
                         openZipFile().getInputStream(destEntry).use { inStream -> inStream.copyTo(zos) }
+                        zos.tryCloseEntry()
                     }
-                    zos.tryCloseEntry()
                 }
             }
             if (!found) {
                 zos.write(ZipEntry(filename), writeFcn)
-                zos.tryCloseEntry()
             }
         }
         if (doCopy) {
@@ -83,12 +81,12 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
 private fun ZipOutputStream.write(zipEntry: ZipEntry, writeFcn: (BufferedWriter) -> Unit) {
     putNextEntry(zipEntry)
     writeFcn(bufferedWriter())
+    tryCloseEntry()
 }
 
 private fun ZipOutputStream.tryCloseEntry() {
     try {
         closeEntry()
     } catch (e: IOException) {
-        println(e)
     }
 }

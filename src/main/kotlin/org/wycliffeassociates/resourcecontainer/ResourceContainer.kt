@@ -10,7 +10,10 @@ import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.*
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.File
+import java.io.IOException
 
 const val MANIFEST_FILENAME = "manifest.yaml"
 const val CONFIG_FILENAME = "config.yaml"
@@ -25,7 +28,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     lateinit var manifest: Manifest
     private val accessor: IResourceContainerAccessor = when (file.extension) {
         "zip" -> ZipAccessor(file)
-        else -> DirAccessor(file)
+        else -> DirectoryAccessor(file)
     }
 
     private fun read(): Manifest {
