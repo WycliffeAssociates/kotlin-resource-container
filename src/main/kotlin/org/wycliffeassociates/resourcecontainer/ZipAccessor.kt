@@ -72,6 +72,10 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
             dest.renameTo(file)
         }
     }
+
+    override fun close() {
+        closeZipFile()
+    }
 }
 
 private fun ZipOutputStream.write(zipEntry: ZipEntry, writeFcn: (BufferedWriter) -> Unit) {

@@ -20,7 +20,7 @@ interface Config {
     fun write(writer: Writer)
 }
 
-class ResourceContainer private constructor(val file: File, var config: Config? = null) {
+class ResourceContainer private constructor(val file: File, var config: Config? = null): AutoCloseable {
 
     lateinit var manifest: Manifest
     private val accessor: IResourceContainerAccessor = when (file.extension) {
@@ -60,11 +60,11 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MANIFEST_FILENAME) { writeManifest(it) }
     }
 
-    private fun writeManifest(bw: Writer) {
+    private fun writeManifest(writer: Writer) {
         val mapper = ObjectMapper(YAMLFactory())
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        bw.use {
+        writer.use {
             mapper.writeValue(it, manifest)
         }
     }
@@ -180,7 +180,10 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
 
             return rc
         }
+    }
 
+    override fun close() {
+        accessor.close()
     }
 }
 

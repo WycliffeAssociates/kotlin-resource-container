@@ -162,7 +162,7 @@ class ContainerUnitTest {
         createNewRcTestCases.forEach {
             val containerFile = File(File(resource!!.toURI().path).parentFile, it)
 
-            val rc = ResourceContainer.create(containerFile) {
+            ResourceContainer.create(containerFile) {
                 manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
                     dublinCore = dublincore {
                         type = "book"
@@ -176,16 +176,16 @@ class ContainerUnitTest {
                         }
                     }
                 }
+            }.use { rc ->
+                assertNotNull(rc)
+                assertEquals("book", rc.type())
+
+                rc.write()
+                val loaded = ResourceContainer.load(containerFile)
+                assertNotNull(loaded)
+                assertEquals(ResourceContainer.conformsTo, loaded.conformsTo())
+                assertEquals("book", loaded.type())
             }
-
-            assertNotNull(rc)
-            assertEquals("book", rc.type())
-
-            rc.write()
-            val loaded = ResourceContainer.load(containerFile)
-            assertNotNull(loaded)
-            assertEquals(ResourceContainer.conformsTo, loaded.conformsTo())
-            assertEquals("book", loaded.type())
         }
     }
 

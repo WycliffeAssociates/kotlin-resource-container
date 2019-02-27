@@ -22,4 +22,8 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
     override fun write(filename: String, writeFunction: (Writer) -> Unit) {
         writeFunction(getFile(filename).bufferedWriter())
     }
+
+    override fun close() {
+        // Consider closing all readers/writers here, but it doesn't seem to be needed.
+    }
 }
