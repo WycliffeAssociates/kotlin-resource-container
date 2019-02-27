@@ -10,48 +10,61 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
-class ZipAccessor(private var file: File) : IResourceContainerAccessor {
+class ZipAccessor(private val file: File) : IResourceContainerAccessor {
+    private var _zipFile: ZipFile? = null
 
-    private val zipFile
-        get() = ZipFile(file)
-
-    override fun getReader(filename: String): BufferedReader {
-        return zipFile.getInputStream(zipFile.getEntry(filename)).bufferedReader()
+    private fun openZipFile(): ZipFile {
+        if (_zipFile == null) _zipFile = ZipFile(file)
+        return _zipFile as ZipFile
     }
 
+    private fun closeZipFile() {
+        _zipFile?.let(ZipFile::close)
+        _zipFile = null
+    }
+
+    @Synchronized
+    override fun getReader(filename: String): BufferedReader {
+        return openZipFile()
+                .getInputStream(openZipFile().getEntry(filename))
+                .bufferedReader()
+    }
+
+    @Synchronized
     override fun checkFileExists(filename: String): Boolean {
-        return zipFile.entries().toList().map { it.name }.contains(filename)
+        return openZipFile()
+                .entries()
+                .asSequence()
+                .map { it.name }
+                .contains(filename)
     }
 
     override fun initWrite() {
         // noop
     }
 
+    @Synchronized
     override fun write(filename: String, writeFcn: (BufferedWriter) -> Unit) {
         val doCopy = file.exists()
         val dest = when (doCopy) {
-            true -> File(file.parent, "temp.zip")
+            true -> File.createTempFile("otter", ".zip", file.parentFile)
             false -> file
         }
         ZipOutputStream(FileOutputStream(dest)).use { zos ->
             var found = false
             if (doCopy) {
-                zipFile.entries().iterator().forEach {
-                    try {
-                        if (it.name == filename) {
-                            zos.write(ZipEntry(filename), writeFcn)
-                            found = true
-                        } else {
-                            // Simply doing zos.putNextEntry(it) resulted in ZipExceptions - invalid entry
-                            // compressed size
-                            val destEntry = ZipEntry(it.name)
-                            zos.putNextEntry(destEntry)
-                            zipFile.getInputStream(destEntry).copyTo(zos)
-                        }
-                        zos.tryCloseEntry()
-                    } catch (e: IOException) {
-                        throw e
+                openZipFile().entries().iterator().forEach {
+                    if (it.name == filename) {
+                        zos.write(ZipEntry(filename), writeFcn)
+                        found = true
+                    } else {
+                        // Simply doing zos.putNextEntry(it) resulted in ZipExceptions - invalid entry
+                        // compressed size
+                        val destEntry = ZipEntry(it.name)
+                        zos.putNextEntry(destEntry)
+                        openZipFile().getInputStream(destEntry).use { inStream -> inStream.copyTo(zos) }
                     }
+                    zos.tryCloseEntry()
                 }
             }
             if (!found) {
@@ -60,11 +73,9 @@ class ZipAccessor(private var file: File) : IResourceContainerAccessor {
             }
         }
         if (doCopy) {
-            val parent = file.parent
-            val name = file.name
-            Files.delete(file.toPath())
-            dest.renameTo(File(parent, name))
-            file = dest
+            closeZipFile()
+            file.delete()
+            dest.renameTo(file)
         }
     }
 }
