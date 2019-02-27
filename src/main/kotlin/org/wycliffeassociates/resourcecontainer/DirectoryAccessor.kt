@@ -4,22 +4,22 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.File
 
-class DirectoryAccessor(private val file: File) : IResourceContainerAccessor {
+class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor {
     override fun getReader(filename: String): BufferedReader {
         return getFile(filename).bufferedReader()
     }
 
-    override fun checkFileExists(filename: String): Boolean {
+    override fun fileExists(filename: String): Boolean {
         return getFile(filename).exists()
     }
 
-    private fun getFile(filename: String): File = File(file, filename)
+    private fun getFile(filename: String): File = File(rootDir, filename)
 
     override fun initWrite() {
-        file.mkdirs()
+        rootDir.mkdirs()
     }
 
-    override fun write(filename: String, writeFcn: (BufferedWriter) -> Unit) {
-        writeFcn(getFile(filename).bufferedWriter())
+    override fun write(filename: String, writeFunction: (BufferedWriter) -> Unit) {
+        writeFunction(getFile(filename).bufferedWriter())
     }
 }

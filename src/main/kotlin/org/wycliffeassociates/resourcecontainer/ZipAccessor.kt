@@ -30,7 +30,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
     }
 
     @Synchronized
-    override fun checkFileExists(filename: String): Boolean {
+    override fun fileExists(filename: String): Boolean {
         return openZipFile()
                 .entries()
                 .asSequence()
@@ -43,7 +43,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
     }
 
     @Synchronized
-    override fun write(filename: String, writeFcn: (BufferedWriter) -> Unit) {
+    override fun write(filename: String, writeFunction: (BufferedWriter) -> Unit) {
         val doCopy = file.exists()
         val dest = when (doCopy) {
             true -> File.createTempFile("otter", ".zip", file.parentFile)
@@ -54,7 +54,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
             if (doCopy) {
                 openZipFile().entries().iterator().forEach {
                     if (it.name == filename) {
-                        zos.write(ZipEntry(filename), writeFcn)
+                        zos.write(ZipEntry(filename), writeFunction)
                         found = true
                     } else {
                         // Simply doing zos.putNextEntry(it) resulted in ZipExceptions - invalid entry
@@ -67,7 +67,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
                 }
             }
             if (!found) {
-                zos.write(ZipEntry(filename), writeFcn)
+                zos.write(ZipEntry(filename), writeFunction)
             }
         }
         if (doCopy) {

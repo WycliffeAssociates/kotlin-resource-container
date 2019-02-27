@@ -32,14 +32,14 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     }
 
     private fun read(): Manifest {
-        if (accessor.checkFileExists(MANIFEST_FILENAME)) {
+        if (accessor.fileExists(MANIFEST_FILENAME)) {
             val mapper = ObjectMapper(YAMLFactory())
             mapper.registerModule(KotlinModule())
             manifest = accessor.getReader(MANIFEST_FILENAME).use {
                 mapper.readValue(it, Manifest::class.java)
             }
             config?.let {
-                if (accessor.checkFileExists(CONFIG_FILENAME)) {
+                if (accessor.fileExists(CONFIG_FILENAME)) {
                     this.config = it.read(accessor.getReader(CONFIG_FILENAME))
                 }
             }
@@ -74,7 +74,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
 
     fun writeConfig() {
         config?.let { config ->
-            if (accessor.checkFileExists(CONFIG_FILENAME)) {
+            if (accessor.fileExists(CONFIG_FILENAME)) {
                 accessor.write(CONFIG_FILENAME) { config.write(it) }
             }
         }
