@@ -13,96 +13,69 @@ import java.io.File
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
 class ContainerUnitTest {
-    @Rule @JvmField
+    @Rule
+    @JvmField
     var resourceDir = TemporaryFolder()
+
+
+    private val loadSingleBookRcCases = listOf(
+            "valid_single_book_rc",
+            "valid_single_book_rc.zip"
+    )
 
     @Test
     @Throws(Exception::class)
     fun loadSingleBookRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(resource!!.toURI().path)
+        loadSingleBookRcCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        val container = ResourceContainer.load(containerDir)
+            val container = ResourceContainer.load(containerDir)
 
-        assertNotNull(container)
-        assertEquals(4, container.chapters().size)
-        assertEquals(8, container.chunks("01").size)
-        assertEquals("Titus", container.readChunk("front", "title").trim())
-        //assertTrue(container.config().get("content").size() > 0)
-        assertNotNull(container.toc())
-
-        // write to toc and config
-        //container.writeTOC("something")
-        //container.writeConfig("something_else")
-
-//        assertEquals("something", container.toc()!!.value())
-//        assertEquals("something_else", container.config().value())
-
-        // delete toc and config
-//        container.writeTOC(null)
-//        assertEquals(null, container.toc()!!.value())
-//
-//        container.writeConfig(null)
-//        assertEquals(null, container.config().value())
+            assertNotNull(container)
+        }
     }
+
+    private val loadMultiBookRcCases = listOf(
+            "valid_multi_book_rc",
+            "valid_multi_book_rc.zip"
+    )
 
     @Test
     @Throws(Exception::class)
     fun loadMultiBookRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_multi_book_rc")
-        val containerDir = File(resource!!.toURI().path)
+        loadMultiBookRcCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
+            val container = ResourceContainer.load(containerDir)
 
-        val container = ResourceContainer.load(containerDir)
-
-        assertNotNull(container)
-
-        assertEquals(4, container.chapters("tit").size)
-        assertEquals(8, container.chunks("tit", "01").size)
-        assertEquals("Titus", container.readChunk("tit", "front", "title").trim())
-
-//        assertEquals(4, container.chapters("gen").size)
-//        assertEquals(8, container.chunks("gen", "01").size)
-//        assertEquals("Genesis", container.readChunk("gen", "front", "title").trim())
-
-//        // write to toc and config
-//        container.writeTOC("gen", "something")
-//        container.writeConfig("gen", "something_else")
-//
-//        assertEquals("something", container.toc("gen")!!.value())
-//        assertEquals("something_else", container.config("gen").value())
-//
-//        // delete toc and config
-//        container.writeTOC("gen", null)
-//        assertEquals(null, container.toc("gen")!!.value())
-//
-//        container.writeConfig("gen", null)
-//        assertEquals(null, container.config("gen").value())
-//
-//        // test exceptions
-//        try {
-//            container.writeConfig(null)
-//            assertTrue(false)
-//        } catch (e: RCException) {
-//            assertEquals("Multiple projects found. Specify the project identifier.", e.message)
-//        }
-
+            assertNotNull(container)
+        }
     }
+
+    private val failToLoadMissingManifestCases = listOf(
+            "missing_manifest",
+            "missing_manifest.zip"
+    )
 
     @Test
     @Throws(Exception::class)
-    fun failToLoadMissingRC() {
-        val containerDir = File("missing_rc")
+    fun failToLoadMissingManifest() {
+        failToLoadMissingManifestCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        try {
-            val container = ResourceContainer.load(containerDir)
-            assertNull(container)
-        } catch (e: Exception) {
-            assertEquals("Missing manifest.yaml", e.message)
+            try {
+                val container = ResourceContainer.load(containerDir)
+                assertNull(container)
+            } catch (e: Exception) {
+                assertEquals("Missing manifest.yaml", e.message)
+            }
         }
-
     }
 
     @Test
@@ -114,34 +87,46 @@ class ContainerUnitTest {
         assertNotNull(container)
     }
 
+    private val updateRcTestCases = listOf(
+            "valid_single_book_rc",
+            "valid_single_book_rc.zip"
+    )
+
     @Test
     @Throws(Exception::class)
     fun updateRC() {
         val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(resource!!.toURI().path)
+        updateRcTestCases.forEach {
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        val container = ResourceContainer.load(containerDir)
+            val container = ResourceContainer.load(containerDir)
 
-        assertNotNull(container)
-        assertEquals("Titus", container.readChunk("front", "title").trim())
-        container.writeChunk("front", "title", "Titus Updated")
-        container.writeChunk("80", "12", "What is this?")
-        assertEquals("Titus Updated", container.readChunk("front", "title").trim())
-        assertEquals("What is this?", container.readChunk("80", "12").trim())
+            assertNotNull(container)
+        }
     }
+
+    private val overwriteRcTestCases = listOf(
+            "overwrite_manifest_rc",
+            "overwrite_manifest_rc.zip"
+    )
 
     @Test
     @Throws(Exception::class)
-    fun createNewRC() {
+    fun overwriteManifest() {
         val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_single_book_rc")
-        val containerDir = File(File(resource!!.toURI().path).parentFile, "new_rc")
+        overwriteRcTestCases.forEach {
+            val resource = classLoader.getResource(it)
+            val containerFile = File(resource!!.toURI().path)
 
-        val rc = ResourceContainer.create(containerDir) {
-            manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
+            val rc = ResourceContainer.load(containerFile)
+
+            assertNotNull(rc)
+            assertEquals("book", rc.type())
+
+            rc.manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
                 dublinCore = dublincore {
-                    type = "book"
+                    type = "testType"
                     format = "text/usfm"
                     identifier = "en-me"
                     rights = "CC BY-SA 4.0"
@@ -152,82 +137,100 @@ class ContainerUnitTest {
                     }
                 }
             }
-        }
 
-        assertNotNull(rc)
-        assertEquals(ResourceContainer.conformsTo, rc.conformsTo())
-        assertEquals("book", rc.type())
+            assertNotNull(rc)
+            assertEquals("testType", rc.type())
+
+            rc.writeManifest()
+            val loaded = ResourceContainer.load(containerFile, strict = false)
+            assertNotNull(loaded)
+            assertEquals("testType", loaded.type())
+        }
     }
+
+    private val createNewRcTestCases = listOf(
+            "new_rc",
+            "new_rc.zip"
+    )
+
+    @Test
+    @Throws(Exception::class)
+    fun createNewRC() {
+        val classLoader = this.javaClass.classLoader
+        val resource = classLoader.getResource("valid_single_book_rc")
+
+        createNewRcTestCases.forEach {
+            val containerFile = File(File(resource!!.toURI().path).parentFile, it)
+
+            ResourceContainer.create(containerFile) {
+                manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
+                    dublinCore = dublincore {
+                        type = "book"
+                        format = "text/usfm"
+                        identifier = "en-me"
+                        rights = "CC BY-SA 4.0"
+                        language = org.wycliffeassociates.resourcecontainer.entity.language {
+                            identifier = "en"
+                            title = "English"
+                            direction = "ltr"
+                        }
+                    }
+                }
+            }.use { rc ->
+                assertNotNull(rc)
+                assertEquals("book", rc.type())
+
+                rc.write()
+                val loaded = ResourceContainer.load(containerFile)
+                assertNotNull(loaded)
+                assertEquals(ResourceContainer.conformsTo, loaded.conformsTo())
+                assertEquals("book", loaded.type())
+            }
+        }
+    }
+
+    private val failOpeningOldRCCases = listOf(
+            "old_rc",
+            "old_rc.zip"
+    )
 
     @Test
     @Throws(Exception::class)
     fun failOpeningOldRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("old_rc")
-        val containerDir = File(resource!!.toURI().path)
+        failOpeningOldRCCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        try {
-            val container = ResourceContainer.load(containerDir)
-            assertNull(container)
-        } catch (e: OutdatedRCException) {
-            assertEquals("Found 0.1 but expected " + ResourceContainer.conformsTo, e.message)
+            try {
+                val container = ResourceContainer.load(containerDir)
+                assertNull(container)
+            } catch (e: OutdatedRCException) {
+                assertEquals("Found 0.1 but expected " + ResourceContainer.conformsTo, e.message)
+            }
         }
-
     }
+
+    private val failOpeningUnsupportedRCCases = listOf(
+            "unsupported_rc",
+            "unsupported_rc.zip"
+    )
 
     @Test
     @Throws(Exception::class)
     fun failOpeningUnsupportedRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("unsupported_rc")
-        val containerDir = File(resource!!.toURI().path)
+        failOpeningUnsupportedRCCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val containerDir = File(resource!!.toURI().path)
 
-        try {
-            val container = ResourceContainer.load(containerDir)
-            assertNull(container)
-        } catch (e: UnsupportedRCException) {
-            assertEquals("Found 9999990.1 but expected " + ResourceContainer.conformsTo, e.message)
+            try {
+                val container = ResourceContainer.load(containerDir)
+                assertNull(container)
+            } catch (e: UnsupportedRCException) {
+                assertEquals("Found 9999990.1 but expected " + ResourceContainer.conformsTo, e.message)
+            }
         }
-
-    }
-
-    @Test
-    @Throws(Exception::class)
-    fun throwErrorWhenNotSpecifyingProjectInMultiProjectRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_multi_book_rc")
-        val containerDir = File(resource!!.toURI().path)
-
-        val container = ResourceContainer.load(containerDir)
-
-        try {
-            container.chapters()
-            assertTrue(false)
-        } catch (e: Exception) {
-            assertEquals("Multiple projects found. Specify the project identifier.", e.message)
-        }
-
-        try {
-            container.chunks("01")
-            assertTrue(false)
-        } catch (e: Exception) {
-            assertEquals("Multiple projects found. Specify the project identifier.", e.message)
-        }
-
-        try {
-            container.readChunk("01", "01")
-            assertTrue(false)
-        } catch (e: Exception) {
-            assertEquals("Multiple projects found. Specify the project identifier.", e.message)
-        }
-
-        try {
-            container.writeChunk("01", "01", "test")
-            assertTrue(false)
-        } catch (e: Exception) {
-            assertEquals("Multiple projects found. Specify the project identifier.", e.message)
-        }
-
     }
 
     @Test
