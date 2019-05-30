@@ -2,7 +2,6 @@ package org.wycliffeassociates.resourcecontainer
 
 import org.junit.Assert.*
 import org.junit.Ignore
-import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.wycliffeassociates.resourcecontainer.entity.dublincore
@@ -158,11 +157,9 @@ class ContainerUnitTest {
     @Test
     @Throws(Exception::class)
     fun createNewRC() {
-        val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_single_book_rc")
-
         createNewRcTestCases.forEach {
-            val containerFile = File(File(resource!!.toURI().path).parentFile, it)
+            val temp = TemporaryFolder().apply { create() }.root
+            val containerFile = File(temp, it)
 
             ResourceContainer.create(containerFile) {
                 manifest = org.wycliffeassociates.resourcecontainer.entity.manifest {
