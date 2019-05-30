@@ -13,10 +13,15 @@ import java.io.File
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
 class ContainerUnitTest {
-    @Rule
-    @JvmField
-    var resourceDir = TemporaryFolder()
+    private fun assertContainerLoads(filename: String) {
+        val classLoader = this.javaClass.classLoader
+        val resource = classLoader.getResource(filename)
+        val containerDir = File(resource!!.toURI().path)
 
+        val container = ResourceContainer.load(containerDir)
+
+        assertNotNull(container)
+    }
 
     private val loadSingleBookRcCases = listOf(
         "valid_single_book_rc",
@@ -27,13 +32,19 @@ class ContainerUnitTest {
     @Throws(Exception::class)
     fun loadSingleBookRC() {
         loadSingleBookRcCases.forEach {
-            val classLoader = this.javaClass.classLoader
-            val resource = classLoader.getResource(it)
-            val containerDir = File(resource!!.toURI().path)
+            assertContainerLoads(it)
+        }
+    }
 
-            val container = ResourceContainer.load(containerDir)
+    private val loadGiteaDownloadCases = listOf(
+        "valid_single_book_rc_gitea.zip"
+    )
 
-            assertNotNull(container)
+    @Test
+    @Throws(Exception::class)
+    fun loadGiteaDownload() {
+        loadGiteaDownloadCases.forEach {
+            assertContainerLoads(it)
         }
     }
 
@@ -46,13 +57,7 @@ class ContainerUnitTest {
     @Throws(Exception::class)
     fun loadMultiBookRC() {
         loadMultiBookRcCases.forEach {
-            val classLoader = this.javaClass.classLoader
-            val resource = classLoader.getResource(it)
-            val containerDir = File(resource!!.toURI().path)
-
-            val container = ResourceContainer.load(containerDir)
-
-            assertNotNull(container)
+            assertContainerLoads(it)
         }
     }
 
