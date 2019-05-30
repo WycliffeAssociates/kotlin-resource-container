@@ -1,36 +1,73 @@
 package org.wycliffeassociates.resourcecontainer
 
-import java.io.*
+import java.io.File
+import java.io.FileOutputStream
+import java.io.Reader
+import java.io.Writer
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 
-class ZipAccessor(private val file: File) : IResourceContainerAccessor {
+private val pathSeparators = "/\\".toCharArray()
+
+class ZipAccessor(
+    private val file: File,
+    private val descendToInterestingFolder: Boolean = true
+) : IResourceContainerAccessor {
     private var _zipFile: ZipFile? = null
+    private var _root: String? = null
+
+    private val root: String? get() {
+        openZipFile()
+        return _root
+    }
 
     private fun openZipFile(): ZipFile {
-        if (_zipFile == null) _zipFile = ZipFile(file)
+        if (_zipFile == null) {
+            _zipFile = ZipFile(file)
+
+            _root = if (descendToInterestingFolder) {
+                val singleTopLevelEntry = _zipFile!!.entries()
+                    .asSequence()
+                    .singleOrNull { it.isTopLevel() }
+                val topLevelContainsOnlyADir = singleTopLevelEntry?.isDirectory ?: false
+                if (topLevelContainsOnlyADir) {
+                    singleTopLevelEntry!!.name.trimEnd(*pathSeparators)
+                } else null
+            } else null
+        }
+
         return _zipFile as ZipFile
     }
 
     private fun closeZipFile() {
         _zipFile?.let(ZipFile::close)
         _zipFile = null
+        _root = null
+    }
+
+    private fun ZipEntry.isTopLevel() = name.lastIndexOfAny(pathSeparators, startIndex = name.length - 2) < 0
+
+    private fun String.toForwardSlashes() = this.replace("\\", "/")
+
+    private fun String.toInternalFilepath(separator: Char = '/') =
+        listOfNotNull(root, this).joinToString(separator.toString())
+
+    private fun getEntry(filename: String): ZipEntry? {
+        return pathSeparators
+            .asSequence()
+            .map { filename.toInternalFilepath(separator = it) }
+            .map { openZipFile().getEntry(it) }
+            .firstOrNull()
     }
 
     override fun getReader(filename: String): Reader {
         return openZipFile()
-                .getInputStream(openZipFile().getEntry(filename))
-                .bufferedReader()
+            .getInputStream(getEntry(filename))
+            .bufferedReader()
     }
 
-    override fun fileExists(filename: String): Boolean {
-        return openZipFile()
-                .entries()
-                .asSequence()
-                .map { it.name }
-                .contains(filename)
-    }
+    override fun fileExists(filename: String) = getEntry(filename) != null
 
     override fun initWrite() {
         // noop
@@ -44,11 +81,15 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
             false -> file
         }
         ZipOutputStream(FileOutputStream(dest)).use { zos ->
+            val internalFilename = when {
+                doCopy -> filename.toInternalFilepath().toForwardSlashes()
+                else -> filename
+            }
             var found = false
             if (doCopy) {
                 openZipFile().entries().iterator().forEach {
-                    if (it.name == filename) {
-                        zos.putNextEntry(ZipEntry(filename))
+                    if (it.name.toForwardSlashes() == internalFilename) {
+                        zos.putNextEntry(ZipEntry(it.name))
                         writeFunction(zos.bufferedWriter())
                         found = true
                     } else {
@@ -61,7 +102,7 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
                 }
             }
             if (!found) {
-                zos.putNextEntry(ZipEntry(filename))
+                zos.putNextEntry(ZipEntry(internalFilename))
                 writeFunction(zos.bufferedWriter())
             }
         }
@@ -75,5 +116,4 @@ class ZipAccessor(private val file: File) : IResourceContainerAccessor {
     override fun close() {
         closeZipFile()
     }
-
 }
