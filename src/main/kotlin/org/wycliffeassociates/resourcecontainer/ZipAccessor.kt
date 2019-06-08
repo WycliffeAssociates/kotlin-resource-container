@@ -17,7 +17,7 @@ class ZipAccessor(
     private var _zipFile: ZipFile? = null
     private var _root: String? = null
 
-    private val root: String? get() {
+    override val root: String? get() {
         openZipFile()
         return _root
     }
