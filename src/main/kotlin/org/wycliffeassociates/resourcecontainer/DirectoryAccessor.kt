@@ -26,4 +26,6 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
     override fun close() {
         // Consider closing all readers/writers here, but it doesn't seem to be needed.
     }
+
+    override val root: String? = null
 }

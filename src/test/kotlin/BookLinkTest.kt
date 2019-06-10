@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer
 
 import org.junit.Assert.*
+import org.junit.Ignore
 import org.junit.Test
 import org.wycliffeassociates.resourcecontainer.entity.Link
 
@@ -73,10 +74,11 @@ class BookLinkTest {
     // automatic linking
 
     @Test
+    @Ignore
     @Throws(Exception::class)
     fun autoLink() {
         val links = Link.findLinks("Genesis 1:1")
-        if(links != null) {
+        if (links != null) {
             assertEquals(1, links.size.toLong())
             assertEquals("Genesis", links.get(0).project)
             assertEquals("1:1", links.get(0).arguments)
@@ -88,10 +90,11 @@ class BookLinkTest {
     }
 
     @Test
+    @Ignore
     @Throws(Exception::class)
     fun autoRangeLink() {
         val links = Link.findLinks("genesis 1:1-3")
-        if(links != null) {
+        if (links != null) {
             assertEquals(1, links.size.toLong())
             assertEquals("genesis", links.get(0).project)
             assertEquals("1:1-3", links.get(0).arguments)
@@ -104,10 +107,11 @@ class BookLinkTest {
     }
 
     @Test
+    @Ignore
     @Throws(Exception::class)
     fun autoMultipleLinks() {
         val links = Link.findLinks("John 1–3; 3:16; 6:14, 44, 46-47; 7:1-5")
-        if(links != null) {
+        if (links != null) {
             assertEquals(6, links.size.toLong())
             val l1 = links.get(0)
             assertEquals("John", l1.project)
