@@ -6,11 +6,13 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.wycliffeassociates.resourcecontainer.entity.Manifest
 import org.wycliffeassociates.resourcecontainer.entity.Project
-import org.wycliffeassociates.resourcecontainer.errors.InvalidRCException
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.*
+import java.io.File
+import java.io.IOException
+import java.io.Reader
+import java.io.Writer
 
 const val MANIFEST_FILENAME = "manifest.yaml"
 const val CONFIG_FILENAME = "config.yaml"
@@ -20,7 +22,7 @@ interface Config {
     fun write(writer: Writer)
 }
 
-class ResourceContainer private constructor(val file: File, var config: Config? = null): AutoCloseable {
+class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
 
     lateinit var manifest: Manifest
     val accessor: IResourceContainerAccessor = when (file.extension) {
@@ -49,7 +51,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun write() {
         writeManifest()
         for (p in manifest.projects) {
-            if(!p.path.isNullOrEmpty()) {
+            if (p.path.isNotEmpty()) {
                 //writeTableOfContents(p)
             }
         }
@@ -77,74 +79,46 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         }
     }
 
-    fun resource(): Resource {
-        manifest?.let {
-            return Resource(
-                    manifest.dublinCore.identifier,
-                    manifest.dublinCore.title,
-                    manifest.dublinCore.type,
-                    manifest.checking.checkingLevel,
-                    manifest.dublinCore.version
-            )
+    fun resource() = Resource(
+        manifest.dublinCore.identifier,
+        manifest.dublinCore.title,
+        manifest.dublinCore.type,
+        manifest.checking.checkingLevel,
+        manifest.dublinCore.version
+    )
+
+    fun project(identifier: String? = null): Project? {
+        if (manifest.projects.isEmpty()) {
+            return null
         }
-        throw Exception("Manifest is null")
-    }
 
-    fun project(): Project? {
-        return project(null)
-    }
-
-    fun project(identifier: String?): Project? {
-        manifest?.let {
-            if (it.projects.isEmpty()) {
-                return null
-            }
-
-            if (!identifier.isNullOrEmpty()) {
-                for (p in it.projects) {
-                    if (p.identifier == identifier) {
-                        return p
-                    }
+        if (!identifier.isNullOrEmpty()) {
+            for (p in manifest.projects) {
+                if (p.identifier == identifier) {
+                    return p
                 }
-            } else if (it.projects.size == 1) {
-                return it.projects[0]
-            } else {
-                throw RCException("Multiple projects found. Specify the project identifier.")
             }
+        } else if (manifest.projects.size == 1) {
+            return manifest.projects[0]
+        } else {
+            throw RCException("Multiple projects found. Specify the project identifier.")
         }
 
         return null
     }
 
-    fun projectIds(): List<String> {
-        val list = arrayListOf<String>()
-        manifest?.let {
-            for (p in it.projects) {
-                list.add(p.identifier)
-            }
-        }
-        return list
-    }
+    fun projectIds(): List<String> = manifest.projects.map(Project::identifier)
 
-    fun projectCount(): Int {
-        return manifest?.projects?.size ?: 0
-    }
+    fun projectCount(): Int = manifest.projects.size
 
-    fun conformsTo(): String {
-        manifest?.let {
-            var version = it.dublinCore.conformsTo
-            return version.replace(Regex("^rc"), "")
-        }
-        throw RCException("Resource container lacks required conformsTo field")
-    }
+    fun conformsTo(): String = manifest.dublinCore.conformsTo.replace(Regex("^rc"), "")
 
     /**
      * Convenience method to get the type of the resource container.
      *
      * @return the RC type
      */
-    inline fun type(): String = this.manifest.dublinCore.type
-
+    fun type(): String = this.manifest.dublinCore.type
 
     companion object {
 
@@ -153,27 +127,24 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         fun create(file: File, init: ResourceContainer.() -> Unit): ResourceContainer {
             val rc = ResourceContainer(file)
             rc.init()
-            if(rc.conformsTo().isNullOrEmpty()) {
+            if (rc.conformsTo().isEmpty()) {
                 rc.manifest.dublinCore.conformsTo = conformsTo
             }
             return rc
         }
 
-        fun load( dir: File, config: Config, strict: Boolean = true): ResourceContainer =
+        fun load(dir: File, config: Config, strict: Boolean = true): ResourceContainer =
             load(dir, strict, config)
 
         fun load(dir: File, strict: Boolean = true, config: Config? = null): ResourceContainer {
             val rc = ResourceContainer(dir, config)
             rc.read()
 
-            if(strict) {
-                if(rc.manifest == null) {
-                    throw InvalidRCException("Missing manifest.yaml")
-                }
-                if(Semver.gt(rc.conformsTo(), conformsTo)) {
+            if (strict) {
+                if (Semver.gt(rc.conformsTo(), conformsTo)) {
                     throw UnsupportedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
                 }
-                if(Semver.lt(rc.conformsTo(), conformsTo)) {
+                if (Semver.lt(rc.conformsTo(), conformsTo)) {
                     throw OutdatedRCException("Found " + rc.conformsTo() + " but expected " + conformsTo)
                 }
             }
@@ -188,9 +159,9 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
 }
 
 data class Resource(
-        val slug: String,
-        val title: String,
-        val type: String,
-        val checkingLevel: String,
-        val version: String
+    val slug: String,
+    val title: String,
+    val type: String,
+    val checkingLevel: String,
+    val version: String
 )

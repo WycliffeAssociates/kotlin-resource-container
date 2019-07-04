@@ -1,5 +1,7 @@
 package org.wycliffeassociates.resourcecontainer
 
+import kotlin.math.max
+
 /**
  * This utility compares variable length semver styled strings
  * 0.1.0, 10.0.1, 1.0, 1, 1.2.3.4
@@ -54,7 +56,7 @@ internal object Semver {
         val ver1 = Version(v1)
         val ver2 = Version(v2)
 
-        val max = Math.max(ver1.size(), ver2.size())
+        val max = max(ver1.size, ver2.size)
         for (i in 0 until max) {
             if (ver1.isWild(i) || ver2.isWild(i)) continue
             if (ver1[i] > ver2[i]) return 1
@@ -67,15 +69,9 @@ internal object Semver {
      * Utility for pumping values from a version string
      */
     private class Version(v: String) {
-        private val slices: Array<String>
+        private val slices = v.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }
 
-        init {
-            slices = v.split("\\.".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-        }
-
-        fun size(): Int {
-            return slices.size
-        }
+        val size: Int = slices.size
 
         /**
          * Returns the value at the given semver index
@@ -96,25 +92,16 @@ internal object Semver {
          * @param index the position in the version
          * @return true if the value is a wildcard
          */
-        fun isWild(index: Int): Boolean {
-            var index = index
-            if (index >= slices.size) index = slices.size - 1
-            if (index < 0) index = 0
-
-            return if (slices.size > 0) {
-                clean(slices[index]) == "*"
-            } else {
-                false
-            }
-        }
+        fun isWild(index: Int): Boolean =
+            slices.isNotEmpty() && clean(slices[index.coerceIn(0, slices.size - 1)]) == "*"
 
         /**
          * Removes all non-numeric characters except for an asterisk.
-         * @param val the value to be cleaned
+         * @param s the value to be cleaned
          * @return a cleaned value
          */
-        private fun clean(`val`: String): String {
-            val cleaned = `val`.replace("[^\\d\\*]".toRegex(), "").trim { it <= ' ' }
+        private fun clean(s: String): String {
+            val cleaned = s.replace("[^\\d\\*]".toRegex(), "").trim { it <= ' ' }
             return if (cleaned.isEmpty()) {
                 "0"
             } else {
