@@ -159,27 +159,17 @@ class Link {
 
         }
 
-        /**
-         * Parses a resource container link
-         * @param title
-         * @param path
-         * @return
-         */
-        @Throws(Exception::class)
-        private fun parseResourceLink(title: String?, path: String): Link? {
-            var title = title
-            var path = path
+        /** Parses a resource container link */
+        private fun parseResourceLink(titleIn: String?, pathIn: String): Link? {
+            var title = titleIn
+            var path = pathIn
             val pattern = Pattern.compile("^((\\w+):)?\\/?(.*)", Pattern.DOTALL)
 
             var protocol: String? = null
             var language: String? = null
             var project: String? = null
             var resource: String? = null
-            var chapter: String? = null
-            var chunk: String? = null
-            var lastChunk: String? = null
             var arguments: String? = null
-
 
             // pull out the protocol
             // TRICKY: also pulls off the first / so our string splitting correctly finds the language
@@ -227,7 +217,9 @@ class Link {
             }
 
             // get chapter:chunk from arguments
-            chapter = arguments
+            var chapter: String? = arguments
+            var chunk: String? = null
+            var lastChunk: String? = null
             if (arguments != null && arguments.contains(":")) {
                 val bits = arguments.split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                 chapter = bits[0]
@@ -282,9 +274,8 @@ class Link {
          * @param text the text that will be searched for Bible passages
          * @return
          */
-        fun findLinks(text: CharSequence): List<Link>? {
-            // TODO: 10/11/16 automatically parse bible passages.
-            return null
+        fun findLinks(@Suppress("UNUSED_PARAMETER") text: CharSequence): List<Link> {
+            TODO("10/11/16 automatically parse bible passages.")
         }
     }
 }
