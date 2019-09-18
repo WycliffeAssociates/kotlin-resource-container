@@ -1,13 +1,26 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        // Step I: add this line
+        classpath 'com.novoda:bintray-release:0.9.1'
+    }
+}
+
 plugins {
     id 'java'
+    id 'java-library'
     id 'org.jetbrains.kotlin.jvm' version '1.3.41'
 }
+
+apply plugin: 'com.novoda.bintray-release'
 
 group 'org.wycliffeassociates'
 
 version 'rc0.2'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 11
 
 repositories {
     jcenter()
@@ -26,10 +39,24 @@ dependencies {
 }
 
 compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
     kotlinOptions.allWarningsAsErrors = true
 }
 compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
     kotlinOptions.allWarningsAsErrors = true
+}
+
+publish {
+    def groupProjectID = 'org.wycliffeassociates'
+    def artifactProjectID = 'kotlin-resource-container'
+    def publishVersionID = "0.1.0"
+
+    userOrg = 'bible-translation-tools'
+    repoName = 'kotlin-resource-container'
+    groupId = groupProjectID
+    artifactId = artifactProjectID
+    publishVersion = publishVersionID
+    desc = 'Kotlin implementation of the Door43 Resouce Container library'
+    website = 'https"//github.com/WycliffeAssociates/kotlin-resource-container'
 }
