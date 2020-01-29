@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.wycliffeassociates.resourcecontainer.entity.Manifest
+import org.wycliffeassociates.resourcecontainer.entity.MediaManifest
 import org.wycliffeassociates.resourcecontainer.entity.Project
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
@@ -14,6 +15,7 @@ import java.io.IOException
 import java.io.Reader
 import java.io.Writer
 
+const val MEDIA_FILENAME = "media.yaml"
 const val MANIFEST_FILENAME = "manifest.yaml"
 const val CONFIG_FILENAME = "config.yaml"
 
@@ -25,6 +27,8 @@ interface Config {
 class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
 
     lateinit var manifest: Manifest
+    lateinit var media: MediaManifest
+
     val accessor: IResourceContainerAccessor = when (file.extension) {
         "zip" -> ZipAccessor(file)
         else -> DirectoryAccessor(file)
@@ -40,6 +44,11 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
             config?.let {
                 if (accessor.fileExists(CONFIG_FILENAME)) {
                     this.config = it.read(accessor.getReader(CONFIG_FILENAME))
+                }
+            }
+            if (accessor.fileExists(MEDIA_FILENAME)) {
+                this.media = accessor.getReader(MEDIA_FILENAME).use {
+                    mapper.readValue(it, MediaManifest::class.java)
                 }
             }
             return manifest
