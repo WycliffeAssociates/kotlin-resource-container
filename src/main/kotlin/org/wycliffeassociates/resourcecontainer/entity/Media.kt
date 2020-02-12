@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MediaManifest(
@@ -25,10 +26,10 @@ data class MediaProject(
 data class Media(
     var identifier: String = "",
     var version: String = "",
-    //var contributor: Array<String> = arrayOf(),
     var url: String = "",
     var quality: List<String> = listOf(),
-    var chapter_url: String= ""
+    @JsonProperty("chapter_url")
+    var chapterUrl: String = ""
 )
 
 fun mediamanifest(init: MediaManifest.() -> Unit): MediaManifest {

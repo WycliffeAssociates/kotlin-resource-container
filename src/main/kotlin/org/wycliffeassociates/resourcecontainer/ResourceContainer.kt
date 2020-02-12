@@ -27,7 +27,7 @@ interface Config {
 class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
 
     lateinit var manifest: Manifest
-    lateinit var media: MediaManifest
+    var media: MediaManifest? = null
 
     val accessor: IResourceContainerAccessor = when (file.extension) {
         "zip" -> ZipAccessor(file)
