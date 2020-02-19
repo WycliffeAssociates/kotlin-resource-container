@@ -1,10 +1,15 @@
 package org.wycliffeassociates.resourcecontainer
 
 import java.io.File
+import java.io.InputStream
 import java.io.Reader
 import java.io.Writer
 
 class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor {
+    override fun getInputStream(filename: String): InputStream {
+        return getFile(filename).inputStream()
+    }
+
     override fun getReader(filename: String): Reader {
         return getFile(filename).bufferedReader()
     }
