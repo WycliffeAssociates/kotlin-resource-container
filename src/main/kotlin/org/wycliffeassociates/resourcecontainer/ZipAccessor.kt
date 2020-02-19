@@ -1,9 +1,6 @@
 package org.wycliffeassociates.resourcecontainer
 
-import java.io.File
-import java.io.FileOutputStream
-import java.io.Reader
-import java.io.Writer
+import java.io.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -59,6 +56,10 @@ class ZipAccessor(
             .map { filename.toInternalFilepath(separator = it) }
             .map { openZipFile().getEntry(it) }
             .firstOrNull()
+    }
+
+    override fun getInputStream(filename: String): InputStream {
+        return openZipFile().getInputStream(getEntry(filename))
     }
 
     override fun getReader(filename: String): Reader {
