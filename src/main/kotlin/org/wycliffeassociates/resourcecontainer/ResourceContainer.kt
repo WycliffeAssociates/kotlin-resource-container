@@ -64,6 +64,9 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
                 //writeTableOfContents(p)
             }
         }
+        media?.let {
+            writeMedia()
+        }
     }
 
     fun writeManifest() {
@@ -77,6 +80,20 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         mapper.setSerializationInclusion(Include.NON_NULL)
         writer.use {
             mapper.writeValue(it, manifest)
+        }
+    }
+
+    fun writeMedia() {
+        accessor.initWrite()
+        accessor.write(MEDIA_FILENAME) { writeMedia(it) }
+    }
+    
+    private fun writeMedia(writer: Writer) {
+        val mapper = ObjectMapper(YAMLFactory())
+        mapper.registerModule(KotlinModule())
+        mapper.setSerializationInclusion(Include.NON_NULL)
+        writer.use {
+            mapper.writeValue(it, media)
         }
     }
 
