@@ -75,7 +75,7 @@ class ZipAccessor(
     }
 
     /** Thread safety warning: This is NOT thread safe, and additionally, write() will close any open Readers. */
-    override fun write(filename: String, writeFunction: (Writer) -> Unit) {
+    override fun write(filename: String, writeFunction: (OutputStream) -> Unit) {
         val doCopy = file.exists()
         val dest = when (doCopy) {
             true -> File.createTempFile("otter", ".zip", file.parentFile)
@@ -90,8 +90,9 @@ class ZipAccessor(
             if (doCopy) {
                 openZipFile().entries().iterator().forEach {
                     if (it.name.toForwardSlashes() == internalFilename) {
-                        zos.putNextEntry(ZipEntry(it.name))
-                        writeFunction(zos.bufferedWriter())
+                        val destEntry = ZipEntry(it.name)
+                        zos.putNextEntry(destEntry)
+                        writeFunction(zos)
                         found = true
                     } else {
                         // Simply doing zos.putNextEntry(it) resulted in ZipExceptions - invalid entry
@@ -104,7 +105,7 @@ class ZipAccessor(
             }
             if (!found) {
                 zos.putNextEntry(ZipEntry(internalFilename))
-                writeFunction(zos.bufferedWriter())
+                writeFunction(zos.buffered())
             }
         }
         if (doCopy) {

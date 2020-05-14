@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -10,10 +11,7 @@ import org.wycliffeassociates.resourcecontainer.entity.Project
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.File
-import java.io.IOException
-import java.io.Reader
-import java.io.Writer
+import java.io.*
 
 const val MEDIA_FILENAME = "media.yaml"
 const val MANIFEST_FILENAME = "manifest.yaml"
@@ -21,7 +19,7 @@ const val CONFIG_FILENAME = "config.yaml"
 
 interface Config {
     fun read(reader: Reader): Config
-    fun write(writer: Writer)
+    fun write(outputStream: OutputStream)
 }
 
 class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
@@ -74,13 +72,12 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MANIFEST_FILENAME) { writeManifest(it) }
     }
 
-    private fun writeManifest(writer: Writer) {
-        val mapper = ObjectMapper(YAMLFactory())
-        mapper.registerModule(KotlinModule())
+    private fun writeManifest(outputStream: OutputStream) {
+        val factory = YAMLFactory()
+        factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+        val mapper = ObjectMapper(factory)
         mapper.setSerializationInclusion(Include.NON_NULL)
-        writer.use {
-            mapper.writeValue(it, manifest)
-        }
+        mapper.writeValue(outputStream, manifest)
     }
 
     fun writeMedia() {
@@ -88,13 +85,13 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MEDIA_FILENAME) { writeMedia(it) }
     }
     
-    private fun writeMedia(writer: Writer) {
-        val mapper = ObjectMapper(YAMLFactory())
+    private fun writeMedia(outputStream: OutputStream) {
+        val factory = YAMLFactory()
+        factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+        val mapper = ObjectMapper(factory)
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        writer.use {
-            mapper.writeValue(it, media)
-        }
+        mapper.writeValue(outputStream, media)
     }
 
     fun writeConfig() {
