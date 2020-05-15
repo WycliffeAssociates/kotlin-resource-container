@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -75,12 +76,13 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     }
 
     private fun writeManifest(writer: Writer) {
-        val mapper = ObjectMapper(YAMLFactory())
+        val factory = YAMLFactory()
+        factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+        val mapper = ObjectMapper(factory)
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        writer.use {
-            mapper.writeValue(it, manifest)
-        }
+        mapper.writeValue(writer, manifest)
+        writer.flush()
     }
 
     fun writeMedia() {
@@ -89,12 +91,13 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     }
     
     private fun writeMedia(writer: Writer) {
-        val mapper = ObjectMapper(YAMLFactory())
+        val factory = YAMLFactory()
+        factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+        val mapper = ObjectMapper(factory)
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        writer.use {
-            mapper.writeValue(it, media)
-        }
+        mapper.writeValue(writer, media)
+        writer.flush()
     }
 
     fun writeConfig() {
