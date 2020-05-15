@@ -1,6 +1,9 @@
 package org.wycliffeassociates.resourcecontainer
 
-import java.io.*
+import java.io.File
+import java.io.InputStream
+import java.io.Reader
+import java.io.Writer
 
 class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor {
     override fun getInputStream(filename: String): InputStream {
@@ -21,8 +24,8 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
         rootDir.mkdirs()
     }
 
-    override fun write(filename: String, writeFunction: (OutputStream) -> Unit) {
-        writeFunction(getFile(filename).outputStream())
+    override fun write(filename: String, writeFunction: (Writer) -> Unit) {
+        writeFunction(getFile(filename).bufferedWriter())
     }
 
     override fun close() {
