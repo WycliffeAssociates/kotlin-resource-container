@@ -11,10 +11,7 @@ import org.wycliffeassociates.resourcecontainer.entity.Project
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.File
-import java.io.IOException
-import java.io.Reader
-import java.io.Writer
+import java.io.*
 
 const val MEDIA_FILENAME = "media.yaml"
 const val MANIFEST_FILENAME = "manifest.yaml"
@@ -22,7 +19,7 @@ const val CONFIG_FILENAME = "config.yaml"
 
 interface Config {
     fun read(reader: Reader): Config
-    fun write(writer: Writer)
+    fun write(writer: OutputStream)
 }
 
 class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
@@ -75,7 +72,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MANIFEST_FILENAME) { writeManifest(it) }
     }
 
-    private fun writeManifest(writer: Writer) {
+    private fun writeManifest(writer: OutputStream) {
         val factory = YAMLFactory()
         factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
         val mapper = ObjectMapper(factory)
@@ -90,7 +87,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MEDIA_FILENAME) { writeMedia(it) }
     }
     
-    private fun writeMedia(writer: Writer) {
+    private fun writeMedia(writer: OutputStream) {
         val factory = YAMLFactory()
         factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
         val mapper = ObjectMapper(factory)
