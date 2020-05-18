@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer
 
 import java.io.InputStream
+import java.io.OutputStream
 import java.io.Reader
 import java.io.Writer
 
@@ -9,7 +10,7 @@ interface IResourceContainerAccessor: AutoCloseable {
     fun getInputStream(filename: String): InputStream
     fun getReader(filename: String): Reader
     fun initWrite()
-    fun write(filename: String, writeFunction: (Writer) -> Unit)
+    fun write(filename: String, writeFunction: (OutputStream) -> Unit)
     /** The RC's root relative to the root of the filesystem, or null if they are the same. */
     val root: String?
 }

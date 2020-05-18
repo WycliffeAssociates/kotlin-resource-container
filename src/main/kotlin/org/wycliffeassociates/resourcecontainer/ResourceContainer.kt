@@ -1,6 +1,7 @@
 package org.wycliffeassociates.resourcecontainer
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
+import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
@@ -10,10 +11,7 @@ import org.wycliffeassociates.resourcecontainer.entity.Project
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.File
-import java.io.IOException
-import java.io.Reader
-import java.io.Writer
+import java.io.*
 
 const val MEDIA_FILENAME = "media.yaml"
 const val MANIFEST_FILENAME = "manifest.yaml"
@@ -21,7 +19,7 @@ const val CONFIG_FILENAME = "config.yaml"
 
 interface Config {
     fun read(reader: Reader): Config
-    fun write(writer: Writer)
+    fun write(writer: OutputStream)
 }
 
 class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
@@ -64,6 +62,9 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
                 //writeTableOfContents(p)
             }
         }
+        media?.let {
+            writeMedia()
+        }
     }
 
     fun writeManifest() {
@@ -71,19 +72,49 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.write(MANIFEST_FILENAME) { writeManifest(it) }
     }
 
-    private fun writeManifest(writer: Writer) {
-        val mapper = ObjectMapper(YAMLFactory())
+    private fun writeManifest(writer: OutputStream) {
+        val factory = YAMLFactory()
+        factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+        val mapper = ObjectMapper(factory)
         mapper.registerModule(KotlinModule())
         mapper.setSerializationInclusion(Include.NON_NULL)
-        writer.use {
-            mapper.writeValue(it, manifest)
-        }
+        mapper.writeValue(writer, manifest)
+        writer.flush()
+    }
+
+    fun writeMedia() {
+        accessor.initWrite()
+        accessor.write(MEDIA_FILENAME) { writeMedia(it) }
+    }
+    
+    private fun writeMedia(writer: OutputStream) {
+        val factory = YAMLFactory()
+        factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+        val mapper = ObjectMapper(factory)
+        mapper.registerModule(KotlinModule())
+        mapper.setSerializationInclusion(Include.NON_NULL)
+        mapper.writeValue(writer, media)
+        writer.flush()
     }
 
     fun writeConfig() {
         config?.let { config ->
             if (accessor.fileExists(CONFIG_FILENAME)) {
                 accessor.write(CONFIG_FILENAME) { config.write(it) }
+            }
+        }
+    }
+
+    /**
+     * @param file the file to copy into the resource container
+     * @param pathInRC the path in the rc to write to (should include file name)
+     *
+     * Adds a file to the Resource Container (such as adding media like audio or images)
+     */
+    fun addFileToContainer(file: File, pathInRC: String) {
+        accessor.write(pathInRC) { ofs ->
+            file.inputStream().use { ifs ->
+                ifs.copyTo(ofs)
             }
         }
     }
