@@ -105,6 +105,20 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         }
     }
 
+    /**
+     * @param file the file to copy into the resource container
+     * @param pathInRC the path in the rc to write to (should include file name)
+     *
+     * Adds a file to the Resource Container (such as adding media like audio or images)
+     */
+    fun addFileToContainer(file: File, pathInRC: String) {
+        accessor.write(pathInRC) { ofs ->
+            file.inputStream().use { ifs ->
+                ifs.copyTo(ofs)
+            }
+        }
+    }
+
     fun resource() = Resource(
         manifest.dublinCore.identifier,
         manifest.dublinCore.title,
