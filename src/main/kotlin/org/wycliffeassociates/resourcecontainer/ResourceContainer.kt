@@ -120,13 +120,13 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     }
 
     /**
-     * @param files a map that includes the file to add and the path
-     * where the file should be placed within the Resource Container
+     * @param files a map that includes the path where the file should be
+     * placed within the Resource Container as well as the file to insert
      *
      * Adds a files to the Resource Container (such as adding media like audio or images)
      */
-    fun addFilesToContainer(files: Map<File, String>) {
-        val map = files.entries.associate { (file, pathInRC) ->
+    fun addFilesToContainer(files: Map<String, File>) {
+        val map = files.entries.associate { (pathInRC, file) ->
             pathInRC to { ofs: OutputStream ->
                 file.inputStream().use { ifs ->
                     ifs.copyTo(ofs)
