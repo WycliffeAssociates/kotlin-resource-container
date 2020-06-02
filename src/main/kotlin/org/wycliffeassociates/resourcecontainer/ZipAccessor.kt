@@ -14,10 +14,11 @@ class ZipAccessor(
     private var _zipFile: ZipFile? = null
     private var _root: String? = null
 
-    override val root: String? get() {
-        openZipFile()
-        return _root
-    }
+    override val root: String?
+        get() {
+            openZipFile()
+            return _root
+        }
 
     private fun openZipFile(): ZipFile {
         if (_zipFile == null) {
@@ -105,6 +106,41 @@ class ZipAccessor(
             if (!found) {
                 zos.putNextEntry(ZipEntry(internalFilename))
                 writeFunction(zos)
+            }
+        }
+        if (doCopy) {
+            closeZipFile()
+            file.delete()
+            dest.renameTo(file)
+        }
+    }
+
+    /** Thread safety warning: This is NOT thread safe, and additionally, write() will close any open Readers. */
+    override fun write(files: Map<String, (OutputStream) -> Unit>) {
+        val doCopy = file.exists()
+        val dest = when (doCopy) {
+            true -> File.createTempFile("otter", ".zip", file.parentFile)
+            false -> file
+        }
+        ZipOutputStream(FileOutputStream(dest)).use { zos ->
+            val internalFilenames = arrayListOf<String>()
+            files.forEach { (filename, writeFunction) ->
+                val internalFilename = when {
+                    doCopy -> filename.toInternalFilepath().toForwardSlashes()
+                    else -> filename
+                }
+                internalFilenames.add(internalFilename)
+                zos.putNextEntry(ZipEntry(internalFilename))
+                writeFunction(zos)
+            }
+            if (doCopy) {
+                openZipFile().entries().iterator().forEach {
+                    if (!internalFilenames.contains(it.name.toForwardSlashes())) {
+                        val destEntry = ZipEntry(it.name)
+                        zos.putNextEntry(destEntry)
+                        openZipFile().getInputStream(destEntry).use { inStream -> inStream.copyTo(zos) }
+                    }
+                }
             }
         }
         if (doCopy) {

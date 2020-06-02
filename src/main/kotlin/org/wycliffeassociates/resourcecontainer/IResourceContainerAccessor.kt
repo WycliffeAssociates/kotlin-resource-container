@@ -11,6 +11,7 @@ interface IResourceContainerAccessor: AutoCloseable {
     fun getReader(filename: String): Reader
     fun initWrite()
     fun write(filename: String, writeFunction: (OutputStream) -> Unit)
+    fun write(files: Map<String, (OutputStream) -> Unit>)
     /** The RC's root relative to the root of the filesystem, or null if they are the same. */
     val root: String?
 }

@@ -86,7 +86,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         accessor.initWrite()
         accessor.write(MEDIA_FILENAME) { writeMedia(it) }
     }
-    
+
     private fun writeMedia(writer: OutputStream) {
         val factory = YAMLFactory()
         factory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
@@ -117,6 +117,24 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
                 ifs.copyTo(ofs)
             }
         }
+    }
+
+    /**
+     * @param files a map that includes the file to add and the path
+     * where the file should be placed within the Resource Container
+     *
+     * Adds a files to the Resource Container (such as adding media like audio or images)
+     */
+    fun addFilesToContainer(files: Map<File, String>) {
+        val map = files.entries.associate { (file, pathInRC) ->
+            pathInRC to { ofs: OutputStream ->
+                file.inputStream().use { ifs ->
+                    ifs.copyTo(ofs)
+                }
+                Unit
+            }
+        }
+        accessor.write(map)
     }
 
     fun resource() = Resource(
