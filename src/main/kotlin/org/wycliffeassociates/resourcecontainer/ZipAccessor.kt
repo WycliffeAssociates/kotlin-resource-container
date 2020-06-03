@@ -115,7 +115,18 @@ class ZipAccessor(
         }
     }
 
-    /** Thread safety warning: This is NOT thread safe, and additionally, write() will close any open Readers. */
+    /**
+     * @param files a map of the file path (with respect to the root of the RC) and a lambda to write
+     * the file to an output stream.
+     *
+     * If the rc has already been written and thus its zip already exists, the write will happen in
+     * a temporary file and then replace the original upon completing the write.
+     *
+     * First, all files in the map will be written. If there was an existing zip, then those zip entries
+     * will be copied, unless they are a file that was contained in the map and are thus outdated.
+     *
+     * ** Thread safety warning: This is NOT thread safe, and additionally, write() will close any open Readers. **
+     */
     override fun write(files: Map<String, (OutputStream) -> Unit>) {
         val doCopy = file.exists()
         val dest = when (doCopy) {
