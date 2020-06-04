@@ -25,6 +25,12 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
         writeFunction(getFile(filename).outputStream())
     }
 
+    override fun write(files: Map<String, (OutputStream) -> Unit>) {
+        files.entries.forEach { (filename, writeFunction) ->
+            writeFunction(getFile(filename).outputStream())
+        }
+    }
+
     override fun close() {
         // Consider closing all readers/writers here, but it doesn't seem to be needed.
     }
