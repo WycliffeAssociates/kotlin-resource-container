@@ -22,12 +22,14 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
     }
 
     override fun write(filename: String, writeFunction: (OutputStream) -> Unit) {
-        writeFunction(getFile(filename).outputStream())
+        val file = getFile(filename).also{ it.parentFile.mkdirs() }
+        writeFunction(file.outputStream())
     }
 
     override fun write(files: Map<String, (OutputStream) -> Unit>) {
         files.entries.forEach { (filename, writeFunction) ->
-            writeFunction(getFile(filename).outputStream())
+            val file = getFile(filename).also{ it.parentFile.mkdirs() }
+            writeFunction(file.outputStream())
         }
     }
 
