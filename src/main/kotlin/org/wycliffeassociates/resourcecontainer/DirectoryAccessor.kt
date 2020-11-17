@@ -23,7 +23,9 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
 
     override fun write(filename: String, writeFunction: (OutputStream) -> Unit) {
         val file = getFile(filename).also{ it.parentFile.mkdirs() }
-        writeFunction(file.outputStream())
+        file.outputStream().use {
+            writeFunction(it)
+        }
     }
 
     override fun write(files: Map<String, (OutputStream) -> Unit>) {
