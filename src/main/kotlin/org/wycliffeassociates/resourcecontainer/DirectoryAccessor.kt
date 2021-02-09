@@ -7,6 +7,21 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
         return getFile(filename).inputStream()
     }
 
+    override fun getInputStreams(path: String, extension: String): Map<String, InputStream> {
+        val inputStreamMap: MutableMap<String, InputStream> = mutableMapOf()
+        val normalizedPath = File(path).normalize().invariantSeparatorsPath
+        val contentDir = rootDir.resolve(normalizedPath)
+
+        contentDir.walk().filter { it.isFile }.forEach { file ->
+            if (file.extension == extension) {
+                val relativePath = file.relativeTo(rootDir).invariantSeparatorsPath
+                inputStreamMap[relativePath] = file.inputStream()
+            }
+        }
+
+        return inputStreamMap
+    }
+
     override fun getReader(filename: String): Reader {
         return getFile(filename).bufferedReader()
     }

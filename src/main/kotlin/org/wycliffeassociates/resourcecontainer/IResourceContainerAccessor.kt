@@ -8,6 +8,7 @@ import java.io.Writer
 interface IResourceContainerAccessor: AutoCloseable {
     fun fileExists(filename: String): Boolean
     fun getInputStream(filename: String): InputStream
+    fun getInputStreams(path: String, extension: String): Map<String, InputStream>
     fun getReader(filename: String): Reader
     fun initWrite()
     fun write(filename: String, writeFunction: (OutputStream) -> Unit)
