@@ -124,11 +124,9 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
         }
     }
 
-    fun getProjectContent(projectIdentifier: String? = null): Content? {
-        val extension = manifest.dublinCore.format
-        return getProjectContent(projectIdentifier, extension)
-    }
-
+    /**
+     *  @since 0.7.0
+     */
     fun getProjectContent(projectIdentifier: String? = null, extension: String): Content? {
         val project = project(projectIdentifier) ?: return null
 

@@ -8,6 +8,7 @@ import org.wycliffeassociates.resourcecontainer.entity.dublincore
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
 import java.io.File
+import java.io.IOException
 
 /**
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
@@ -234,6 +235,60 @@ class ContainerUnitTest {
             } catch (e: UnsupportedRCException) {
                 assertEquals("Found 9999990.1 but expected " + ResourceContainer.conformsTo, e.message)
             }
+        }
+    }
+
+    private val getContentFromRCCases = listOf(
+        "sng_book_various_content_rc",
+        "sng_book_various_content_rc.zip"
+    )
+
+    @Test
+    @Throws(Exception::class)
+    fun getContentFromRC() {
+        getContentFromRCCases.forEach {
+            val classLoader = this.javaClass.classLoader
+            val resource = classLoader.getResource(it)
+            val rcPath = File(resource!!.toURI().path)
+            val tempDir = createTempDir()
+            val rc = ResourceContainer.load(rcPath)
+            val wavContent = rc.getProjectContent(
+                    projectIdentifier = "sng", extension = "wav"
+            )
+
+            assertNotNull(wavContent)
+            assertEquals(2, wavContent!!.streams.size)
+
+
+            wavContent.streams.forEach { entry ->
+                tempDir.resolve(File(entry.key).name).outputStream().use { output ->
+                   output.write(entry.value.read())
+                }
+            }
+
+            val usfmContent = rc.getProjectContent(extension = "usfm")
+
+            assertNotNull(usfmContent)
+            assertEquals(1, usfmContent!!.streams.size)
+
+            usfmContent.streams.forEach { entry ->
+                tempDir.resolve(File(entry.key).name).outputStream().use { output ->
+                    output.write(entry.value.read())
+                }
+            }
+            rc.close()
+
+            try {
+                wavContent.streams.forEach { entry ->
+                    tempDir.resolve(File(entry.key).name).outputStream().use { output ->
+                        output.write(entry.value.read())
+                    }
+                }
+            } catch (ex: IOException) {
+                assertEquals("Stream closed", ex.message)
+            }
+
+            tempDir.deleteRecursively()
         }
     }
 

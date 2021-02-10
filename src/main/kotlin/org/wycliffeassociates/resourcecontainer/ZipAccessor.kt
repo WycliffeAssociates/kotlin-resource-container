@@ -66,14 +66,20 @@ class ZipAccessor(
     override fun getInputStreams(path: String, extension: String): Map<String, InputStream> {
         val inputStreamMap: MutableMap<String, InputStream> = mutableMapOf()
         val normalizedPath = File(path).normalize().invariantSeparatorsPath
-        val zipFile = openZipFile()
+        val pathPrefix = if (root.isNullOrEmpty()) {
+            normalizedPath
+        } else {
+            File(root).resolve(normalizedPath).invariantSeparatorsPath
+        }
 
-        zipFile.entries().iterator().forEach { entry ->
+        openZipFile()
+        _zipFile!!.entries().iterator().forEach { entry ->
             val fileEntry = File(entry.name)
             if (
-                    entry.name.startsWith(normalizedPath) && fileEntry.extension == extension
+                    entry.name.startsWith(pathPrefix) && fileEntry.extension == extension
             ) {
-                inputStreamMap[entry.name] = zipFile.getInputStream(entry)
+                val name = fileEntry.relativeTo(File(pathPrefix)).invariantSeparatorsPath
+                inputStreamMap[name] = _zipFile!!.getInputStream(entry)
             }
         }
 
