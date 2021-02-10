@@ -72,14 +72,14 @@ class ZipAccessor(
             File(root).resolve(normalizedPath).invariantSeparatorsPath
         }
 
-        openZipFile()
-        _zipFile!!.entries().iterator().forEach { entry ->
+        val zipFile = openZipFile()
+        zipFile.entries().iterator().forEach { entry ->
             val fileEntry = File(entry.name)
             if (
                     entry.name.startsWith(pathPrefix) && fileEntry.extension == extension
             ) {
                 val name = fileEntry.relativeTo(File(pathPrefix)).invariantSeparatorsPath
-                inputStreamMap[name] = _zipFile!!.getInputStream(entry)
+                inputStreamMap[name] = zipFile.getInputStream(entry)
             }
         }
 
