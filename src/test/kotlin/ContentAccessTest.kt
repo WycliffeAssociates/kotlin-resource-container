@@ -46,7 +46,7 @@ class ContentAccessTest {
     fun getContentFromRC() {
         testCases.forEach { testCase ->
             val rcFile = getRCFile(testCase.path)
-            val rc = ResourceContainer.load(rcFile).use {
+            ResourceContainer.load(rcFile).use {
                 val content = it.getProjectContent(
                         projectIdentifier = "sng", extension = testCase.extension
                 )
