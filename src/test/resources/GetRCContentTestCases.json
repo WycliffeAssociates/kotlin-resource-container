@@ -2,11 +2,11 @@
   {
     "path": "sng_book_various_content_rc",
     "extension": "usfm",
-    "numberOfStreams": 1
+    "expectedStreams": 1
   },
   {
     "path": "sng_book_various_content_rc.zip",
     "extension": "wav",
-    "numberOfStreams": 2
+    "expectedStreams": 2
   }
 ]
