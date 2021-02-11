@@ -6,6 +6,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import java.io.File
@@ -44,7 +45,7 @@ class ContentAccessTest {
 
     @Test
     @Throws(Exception::class)
-    fun getContentFromRC() {
+    fun testGetContentFromRC() {
         testCases.forEach { testCase ->
             val rcFile = getRCFile(testCase.path)
             ResourceContainer.load(rcFile).use { rc ->
@@ -58,7 +59,7 @@ class ContentAccessTest {
 
                 content.streams.forEach { entry ->
                     tempDir.resolve(File(entry.key).name).outputStream().use { output ->
-                        output.write(entry.value.read())
+                        output.write(entry.value.readBytes())
                     }
                 }
             }
@@ -67,7 +68,7 @@ class ContentAccessTest {
 
     @Test
     @Throws(Exception::class)
-    fun failOnClosedZipFile() {
+    fun testStreamClosedZipRC() {
         val testCase = testCases.first { it.path.endsWith(".zip") }
         val rcFile = getRCFile(testCase.path)
         val rc = ResourceContainer.load(rcFile)
@@ -83,7 +84,7 @@ class ContentAccessTest {
     }
 
     @Test
-    fun subsequentAccess() {
+    fun testSubsequentAccess() {
         val testCase = testCases.first { it.path.endsWith(".zip") }
         val rcFile = getRCFile(testCase.path)
         val rc = ResourceContainer.load(rcFile)
@@ -97,5 +98,43 @@ class ContentAccessTest {
 
         assertNotNull(content)
         assertEquals(testCase.expectedStreams, content!!.streams.size)
+    }
+
+    @Test
+    fun test_randomly_read_content_stream_from_zip_RC() {
+        val testCase = testCases.first { it.path.endsWith(".zip") }
+        val rcFile = getRCFile(testCase.path)
+        val rc = ResourceContainer.load(rcFile)
+        var content = rc.getProjectContent(extension = "wav")
+
+        assertNotNull(content)
+        content!!
+        assertEquals(
+                "Expected 3 files from content",
+                3, content.streams.size
+        )
+
+        val entries = content.streams.keys.toList()
+        try {
+            content.streams[entries[2]]!!.use { input ->
+                tempDir.resolve("file_2.wav").outputStream().use { output ->
+                    output.write(input.readBytes())
+                }
+            }
+
+            content.streams[entries[0]]!!.use { input ->
+                tempDir.resolve("file_0.wav").outputStream().use { output ->
+                    output.write(input.readBytes())
+                }
+            }
+
+            content.streams[entries[1]]!!.use { input ->
+                tempDir.resolve("file_1.wav").outputStream().use { output ->
+                    output.write(input.readBytes())
+                }
+            }
+        } catch (ex: Exception) {
+            fail("Random content stream accessing failed")
+        }
     }
 }
