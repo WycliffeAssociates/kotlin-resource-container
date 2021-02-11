@@ -8,6 +8,7 @@ import org.wycliffeassociates.resourcecontainer.entity.dublincore
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
 import java.io.File
+import java.io.IOException
 
 /**
  * To work on unit tests, switch the Test Artifact in the Build Variants view.

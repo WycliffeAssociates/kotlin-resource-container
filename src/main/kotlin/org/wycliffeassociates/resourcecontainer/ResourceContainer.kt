@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import org.wycliffeassociates.resourcecontainer.entity.Content
 import org.wycliffeassociates.resourcecontainer.entity.Manifest
 import org.wycliffeassociates.resourcecontainer.entity.MediaManifest
 import org.wycliffeassociates.resourcecontainer.entity.Project
@@ -22,6 +23,10 @@ interface Config {
     fun write(writer: OutputStream)
 }
 
+/**
+ *  This is an object that holds resource until it is closed. It is strongly advised to
+ *  use within a disposable use() block or manually invoke the close() method.
+ */
 class ResourceContainer private constructor(val file: File, var config: Config? = null) : AutoCloseable {
 
     lateinit var manifest: Manifest
@@ -116,6 +121,20 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
             file.inputStream().use { ifs ->
                 ifs.copyTo(ofs)
             }
+        }
+    }
+
+    /**
+     *  @since 0.8.0
+     */
+    fun getProjectContent(projectIdentifier: String? = null, extension: String): Content? {
+        val project = project(projectIdentifier) ?: return null
+
+        val contentStreams = accessor.getInputStreams(project.path, extension)
+        return if (contentStreams.any()) {
+            Content(project, contentStreams)
+        } else {
+            null
         }
     }
 

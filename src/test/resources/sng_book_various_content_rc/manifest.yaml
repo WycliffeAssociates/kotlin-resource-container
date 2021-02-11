@@ -1,0 +1,33 @@
+---
+dublin_core:
+  type: "book"
+  conformsto: "0.2"
+  format: "text/usfm"
+  identifier: "ulb"
+  title: "Unlocked Literal Bible"
+  subject: "Bible"
+  description: ""
+  language:
+    direction: "ltr"
+    identifier: "vi"
+    title: "Tiếng Việt"
+  source:
+  - identifier: "ulb"
+    language: "en"
+    version: "12"
+  rights: ""
+  creator: "Orature"
+  contributor: []
+  relation: []
+  publisher: ""
+  issued: "2021-02-01"
+  modified: "2021-02-01"
+  version: "12"
+projects:
+- title: "Song of Solomon"
+  identifier: "sng"
+  sort: 1
+  path: "./content"
+checking:
+  checking_entity: []
+  checking_level: ""

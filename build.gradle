@@ -5,7 +5,7 @@ plugins {
 
 group 'org.wycliffeassociates'
 
-version 'rc0.2'
+version '0.8.0'
 
 sourceCompatibility = 1.8
 
