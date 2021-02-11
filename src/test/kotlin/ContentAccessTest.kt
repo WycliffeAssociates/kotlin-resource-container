@@ -2,7 +2,6 @@ package org.wycliffeassociates.resourcecontainer
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -16,24 +15,18 @@ class ContentAccessTest {
     private data class GetContentTestCase(
         val path: String,
         val extension: String,
-        val expectedStreams: Int
+        val expectedStreams: Int,
+        val content: String
     )
 
-    private lateinit var tempDir: File
     private lateinit var testCases: List<GetContentTestCase>
 
     @Before
     fun setUp() {
-        tempDir = createTempDir()
         val testCaseResource = javaClass.classLoader.getResourceAsStream("GetRCContentTestCases.json")
         testCaseResource.use {
             testCases = jacksonObjectMapper().readValue(it)
         }
-    }
-
-    @After
-    fun tearDown() {
-        tempDir.deleteRecursively()
     }
 
     @Throws(FileNotFoundException::class)
@@ -58,9 +51,8 @@ class ContentAccessTest {
                 assertEquals(testCase.expectedStreams, content.streams.size)
 
                 content.streams.forEach { entry ->
-                    tempDir.resolve(File(entry.key).name).outputStream().use { output ->
-                        output.write(entry.value.readBytes())
-                    }
+                    val contentAsString = entry.value.bufferedReader().readText()
+                    assertEquals(testCase.content, contentAsString)
                 }
             }
         }
@@ -105,7 +97,7 @@ class ContentAccessTest {
         val testCase = testCases.first { it.path.endsWith(".zip") }
         val rcFile = getRCFile(testCase.path)
         val rc = ResourceContainer.load(rcFile)
-        var content = rc.getProjectContent(extension = "wav")
+        var content = rc.getProjectContent(extension = testCase.extension)
 
         assertNotNull(content)
         content!!
@@ -117,21 +109,18 @@ class ContentAccessTest {
         val entries = content.streams.keys.toList()
         try {
             content.streams[entries[2]]!!.use { input ->
-                tempDir.resolve("file_2.wav").outputStream().use { output ->
-                    output.write(input.readBytes())
-                }
+                val contentAsString = input.bufferedReader().readText()
+                assertEquals(testCase.content, contentAsString)
             }
 
             content.streams[entries[0]]!!.use { input ->
-                tempDir.resolve("file_0.wav").outputStream().use { output ->
-                    output.write(input.readBytes())
-                }
+                val contentAsString = input.bufferedReader().readText()
+                assertEquals(testCase.content, contentAsString)
             }
 
             content.streams[entries[1]]!!.use { input ->
-                tempDir.resolve("file_1.wav").outputStream().use { output ->
-                    output.write(input.readBytes())
-                }
+                val contentAsString = input.bufferedReader().readText()
+                assertEquals(testCase.content, contentAsString)
             }
         } catch (ex: Exception) {
             fail("Random content stream accessing failed")
