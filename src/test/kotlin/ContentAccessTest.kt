@@ -21,7 +21,6 @@ class ContentAccessTest {
     private lateinit var tempDir: File
     private lateinit var testCases: List<GetContentTestCase>
 
-
     @Before
     fun setUp() {
         tempDir = createTempDir()
