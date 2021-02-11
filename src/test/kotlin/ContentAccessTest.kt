@@ -55,10 +55,6 @@ class ContentAccessTest {
                 assertNotNull(content)
                 content!!
                 assertEquals(testCase.expectedStreams, content.streams.size)
-                assertFalse(
-                        "Empty file stream found",
-                        content.streams.any { it.value.available() == 0 }
-                )
 
                 content.streams.forEach { entry ->
                     tempDir.resolve(File(entry.key).name).outputStream().use { output ->
