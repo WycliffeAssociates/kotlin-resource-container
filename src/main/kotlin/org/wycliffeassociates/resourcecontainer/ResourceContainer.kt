@@ -125,7 +125,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     }
 
     /**
-     *  @since 0.7.0
+     *  @since 0.8.0
      */
     fun getProjectContent(projectIdentifier: String? = null, extension: String): Content? {
         val project = project(projectIdentifier) ?: return null
