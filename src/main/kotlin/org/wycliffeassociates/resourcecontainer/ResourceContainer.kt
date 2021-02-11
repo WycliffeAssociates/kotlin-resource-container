@@ -32,7 +32,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     lateinit var manifest: Manifest
     var media: MediaManifest? = null
 
-    private val accessor: IResourceContainerAccessor = when (file.extension) {
+    val accessor: IResourceContainerAccessor = when (file.extension) {
         "zip" -> ZipAccessor(file)
         else -> DirectoryAccessor(file)
     }
