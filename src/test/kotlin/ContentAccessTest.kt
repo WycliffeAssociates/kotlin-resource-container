@@ -84,7 +84,7 @@ class ContentAccessTest {
     }
 
     @Test
-    fun testSubsequentAccess() {
+    fun testRepeatedAccess() {
         val testCase = testCases.first { it.path.endsWith(".zip") }
         val rcFile = getRCFile(testCase.path)
         val rc = ResourceContainer.load(rcFile)
