@@ -133,8 +133,12 @@ class ZipAccessor(
         }
         if (doCopy) {
             closeZipFile()
-            file.delete()
-            dest.renameTo(file)
+            dest.inputStream().use { fis ->
+                file.outputStream().use { fos ->
+                    fis.copyTo(fos)
+                }
+            }
+            dest.delete()
         }
     }
 
@@ -179,8 +183,13 @@ class ZipAccessor(
         }
         if (doCopy) {
             closeZipFile()
-            file.delete()
-            dest.renameTo(file)
+            dest.inputStream().use { fis ->
+                file.outputStream().use { fos ->
+                    fis.copyTo(fos)
+                }
+            }
+            dest.delete()
+
         }
     }
 
