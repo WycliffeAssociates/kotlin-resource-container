@@ -39,8 +39,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     var media: MediaManifest? = null
 
     val accessor: IResourceContainerAccessor = when {
-        file.isFile && detectFileType() == MediaType.APPLICATION_ZIP
-                -> ZipAccessor(file)
+        file.isFile && detectFileType() == MediaType.APPLICATION_ZIP -> ZipAccessor(file)
         else -> DirectoryAccessor(file)
     }
 

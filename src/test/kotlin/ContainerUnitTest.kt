@@ -18,9 +18,11 @@ class ContainerUnitTest {
     @Test
     fun `load rc with uncommon extension`() {
         val classLoader = this.javaClass.classLoader
-        val resource = classLoader.getResource("valid_rc.orature").file
+        val sourceRC = classLoader.getResource("valid_single_book_rc.zip").file
+        val rcFile = File(sourceRC).copyTo(createTempFile(suffix = ".orature"), overwrite = true)
+        rcFile.deleteOnExit()
 
-        ResourceContainer.load(File(resource)).use {
+        ResourceContainer.load(rcFile).use {
             assertNotNull(it)
         }
     }
