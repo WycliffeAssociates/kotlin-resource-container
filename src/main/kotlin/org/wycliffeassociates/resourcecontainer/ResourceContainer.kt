@@ -5,6 +5,8 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import org.apache.tika.Tika
+import org.apache.tika.mime.MediaType
 import org.wycliffeassociates.resourcecontainer.entity.Content
 import org.wycliffeassociates.resourcecontainer.entity.Manifest
 import org.wycliffeassociates.resourcecontainer.entity.MediaManifest
@@ -12,7 +14,11 @@ import org.wycliffeassociates.resourcecontainer.entity.Project
 import org.wycliffeassociates.resourcecontainer.errors.OutdatedRCException
 import org.wycliffeassociates.resourcecontainer.errors.RCException
 import org.wycliffeassociates.resourcecontainer.errors.UnsupportedRCException
-import java.io.*
+import java.io.File
+import java.io.IOException
+import java.io.OutputStream
+import java.io.Reader
+
 
 const val MEDIA_FILENAME = "media.yaml"
 const val MANIFEST_FILENAME = "manifest.yaml"
@@ -32,9 +38,13 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     lateinit var manifest: Manifest
     var media: MediaManifest? = null
 
-    val accessor: IResourceContainerAccessor = when (file.extension) {
-        "zip" -> ZipAccessor(file)
+    val accessor: IResourceContainerAccessor = when {
+        file.isFile && detectFileType() == MediaType.APPLICATION_ZIP -> ZipAccessor(file)
         else -> DirectoryAccessor(file)
+    }
+
+    private fun detectFileType(): MediaType {
+        return MediaType.parse(Tika().detect(file))
     }
 
     private fun read(): Manifest {

@@ -14,6 +14,19 @@ import java.io.IOException
  * To work on unit tests, switch the Test Artifact in the Build Variants view.
  */
 class ContainerUnitTest {
+
+    @Test
+    fun `load rc with uncommon extension`() {
+        val classLoader = this.javaClass.classLoader
+        val sourceRC = classLoader.getResource("valid_single_book_rc.zip").file
+        val rcFile = File(sourceRC).copyTo(createTempFile(suffix = ".orature"), overwrite = true)
+        rcFile.deleteOnExit()
+
+        ResourceContainer.load(rcFile).use {
+            assertNotNull(it)
+        }
+    }
+
     private fun assertContainerLoads(filename: String) {
         val classLoader = this.javaClass.classLoader
         val resource = classLoader.getResource(filename)
