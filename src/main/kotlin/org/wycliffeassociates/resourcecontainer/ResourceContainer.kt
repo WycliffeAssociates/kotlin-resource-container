@@ -39,6 +39,8 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     var media: MediaManifest? = null
 
     val accessor: IResourceContainerAccessor = when {
+        // file may not exist at creation of a rc with .zip suffix in file path
+        file.extension == "zip" -> ZipAccessor(file)
         file.isFile && detectFileType() == MediaType.APPLICATION_ZIP -> ZipAccessor(file)
         else -> DirectoryAccessor(file)
     }
