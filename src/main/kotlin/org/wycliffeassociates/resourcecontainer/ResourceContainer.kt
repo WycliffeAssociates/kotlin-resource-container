@@ -142,7 +142,7 @@ class ResourceContainer private constructor(val file: File, var config: Config? 
     fun getProjectContent(projectIdentifier: String? = null, extension: String): Content? {
         val project = project(projectIdentifier) ?: return null
 
-        val contentStreams = accessor.getInputStreams(project.path, listOf(extension))
+        val contentStreams = accessor.getInputStreams(project.path, extension)
         return if (contentStreams.any()) {
             Content(project, contentStreams)
         } else {
