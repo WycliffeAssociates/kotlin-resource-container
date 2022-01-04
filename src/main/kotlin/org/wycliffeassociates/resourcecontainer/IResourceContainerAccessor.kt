@@ -9,6 +9,15 @@ interface IResourceContainerAccessor: AutoCloseable {
     fun fileExists(filename: String): Boolean
     fun getInputStream(filename: String): InputStream
     fun getInputStreams(path: String, extension: String): Map<String, InputStream>
+    /**
+     * Get the input streams from container.
+     * @param path the path of the resource inside the container. It will include the recursive children of this path.
+     * @param extensions the list of filter extensions. Empty list will accept all extensions.
+     */
+    fun getInputStreams(
+        path: String,
+        extensions: List<String> = listOf()
+    ): Map<String, InputStream>
     fun getReader(filename: String): Reader
     fun initWrite()
     fun write(filename: String, writeFunction: (OutputStream) -> Unit)
