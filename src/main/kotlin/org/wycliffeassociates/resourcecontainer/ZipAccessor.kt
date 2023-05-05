@@ -79,10 +79,10 @@ class ZipAccessor(
         val zipFile = openZipFile()
         zipFile.entries().iterator().forEach { entry ->
             val fileEntry = File(entry.name)
-            if (
-                (extensions.isEmpty() && fileEntry.extension != "") ||
-                (entry.name.startsWith(pathPrefix) && fileEntry.extension in extensions)
-            ) {
+            val prefixMatched = entry.name.startsWith(pathPrefix)
+            val allExtensionsAccepted = extensions.isEmpty() && fileEntry.extension.isNotEmpty()
+
+            if (prefixMatched && (allExtensionsAccepted || fileEntry.extension in extensions)) {
                 val name = fileEntry.relativeTo(File(pathPrefix)).invariantSeparatorsPath
                 inputStreamMap[name] = zipFile.getInputStream(entry)
             }
