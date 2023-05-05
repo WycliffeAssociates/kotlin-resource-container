@@ -3,6 +3,19 @@ package org.wycliffeassociates.resourcecontainer
 import java.io.*
 
 class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor {
+
+    override fun list(path: String): List<String> {
+        val normalizedPath = File(path).normalize().invariantSeparatorsPath
+        val lookupPath = rootDir.resolve(normalizedPath)
+        if (!lookupPath.exists() || lookupPath.isFile) {
+            return listOf()
+        }
+        return lookupPath.walk()
+            .filter { it.isFile }
+            .map { it.invariantSeparatorsPath }
+            .toList()
+    }
+
     override fun getInputStream(filename: String): InputStream {
         return getFile(filename).inputStream()
     }

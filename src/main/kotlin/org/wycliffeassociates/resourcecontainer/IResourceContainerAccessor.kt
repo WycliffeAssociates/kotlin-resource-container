@@ -7,6 +7,13 @@ import java.io.Writer
 
 interface IResourceContainerAccessor: AutoCloseable {
     fun fileExists(filename: String): Boolean
+
+    /**
+     * Returns a list of file paths under the given lookup path in the resource container.
+     *
+     * @param path the lookup path within the resource container.
+     */
+    fun list(path: String): List<String>
     fun getInputStream(filename: String): InputStream
     fun getInputStreams(path: String, extension: String): Map<String, InputStream>
     /**

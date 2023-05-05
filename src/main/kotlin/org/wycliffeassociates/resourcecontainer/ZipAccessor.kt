@@ -59,6 +59,20 @@ class ZipAccessor(
             .firstOrNull()
     }
 
+    override fun list(path: String): List<String> {
+        val normalizedPath = File(path).normalize().invariantSeparatorsPath
+        val pathPrefix = if (root.isNullOrEmpty()) {
+            normalizedPath
+        } else {
+            File(root).resolve(normalizedPath).invariantSeparatorsPath
+        }
+
+        val zipFile = openZipFile()
+        return zipFile.entries().toList()
+            .filter { it.name.startsWith(pathPrefix) && File(it.name).extension.isNotEmpty() }
+            .map { it.name }
+    }
+
     override fun getInputStream(filename: String): InputStream {
         return openZipFile().getInputStream(getEntry(filename))
     }
