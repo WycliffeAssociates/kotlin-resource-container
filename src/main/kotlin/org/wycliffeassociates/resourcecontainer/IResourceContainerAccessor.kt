@@ -9,10 +9,10 @@ interface IResourceContainerAccessor: AutoCloseable {
     fun fileExists(filename: String): Boolean
 
     /**
-     * Returns a list of file paths under the given lookup path in the resource container.
+     * Returns a list of file paths that are under the specified path (recursive) in the resource container.
      * If the path denotes a file, an empty list will be returned.
      *
-     * @param path the lookup path within the resource container.
+     * @param path the path of the resource inside the container. It will include the recursive children of this path.
      */
     fun list(path: String): List<String>
     fun getInputStream(filename: String): InputStream
