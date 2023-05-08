@@ -7,6 +7,14 @@ import java.io.Writer
 
 interface IResourceContainerAccessor: AutoCloseable {
     fun fileExists(filename: String): Boolean
+
+    /**
+     * Returns a list of file paths that are under the specified path (recursive) in the resource container.
+     * If the path denotes a file, an empty list will be returned.
+     *
+     * @param path the path of the resource inside the container. It will include the recursive children of this path.
+     */
+    fun list(path: String): List<String>
     fun getInputStream(filename: String): InputStream
     fun getInputStreams(path: String, extension: String): Map<String, InputStream>
     /**
