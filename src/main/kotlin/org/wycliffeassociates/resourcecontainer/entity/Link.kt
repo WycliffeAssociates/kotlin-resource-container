@@ -1,5 +1,6 @@
 package org.wycliffeassociates.resourcecontainer.entity
 
+import java.util.*
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -110,7 +111,7 @@ class Link {
         } catch (e: NumberFormatException) {
         }
 
-        return value!!.trim { it <= ' ' }.toLowerCase()
+        return value!!.trim { it <= ' ' }.lowercase(Locale.ENGLISH)
     }
 
     companion object {
@@ -136,7 +137,7 @@ class Link {
             while (m.find()) {
                 if (numMatches > 1) throw Exception("Invalid link! Multiple links found")
                 numMatches++
-                linkPath = m.group(1).toLowerCase()
+                linkPath = m.group(1).lowercase(Locale.ENGLISH)
             }
 
             // find titled links
@@ -146,7 +147,7 @@ class Link {
                 if (numMatches > 1) throw Exception("Invalid link! Multiple links found")
                 numMatches++
                 linkTitle = m.group(1)
-                linkPath = m.group(2).toLowerCase()
+                linkPath = m.group(2).lowercase(Locale.ENGLISH)
             }
 
             // process link path
