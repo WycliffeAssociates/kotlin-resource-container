@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'org.wycliffeassociates'
-version '0.11.0'
+version '0.12.1'
 
 sourceCompatibility = 1.8
 
@@ -16,9 +16,9 @@ repositories {
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
 
-    compile "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.9"
-    compile 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.9'
-    implementation "org.apache.tika:tika-core:2.0.0"
+    api "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.9"
+    api 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.9'
+    api "org.apache.tika:tika-core:2.0.0"
 
     // https://mvnrepository.com/artifact/org.json/json
     compile group: 'org.json', name: 'json', version: '20180813'
