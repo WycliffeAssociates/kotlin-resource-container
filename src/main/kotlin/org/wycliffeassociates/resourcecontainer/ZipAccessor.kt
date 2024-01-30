@@ -51,6 +51,8 @@ class ZipAccessor(
     private fun String.toInternalFilepath(separator: Char = '/') =
         listOfNotNull(root, this).joinToString(separator.toString())
 
+    private fun String.normalizePath() = File(this).normalize().invariantSeparatorsPath
+
     private fun getEntry(filename: String): ZipEntry? {
         return pathSeparators
             .asSequence()
@@ -60,7 +62,7 @@ class ZipAccessor(
     }
 
     override fun list(path: String): List<String> {
-        val normalizedPath = File(path).normalize().invariantSeparatorsPath
+        val normalizedPath = path.normalizePath()
         val pathPrefix = if (root.isNullOrEmpty()) {
             normalizedPath
         } else {
@@ -74,7 +76,8 @@ class ZipAccessor(
     }
 
     override fun getInputStream(filename: String): InputStream {
-        return openZipFile().getInputStream(getEntry(filename))
+        val normalized = filename.normalizePath()
+        return openZipFile().getInputStream(getEntry(normalized))
     }
 
     override fun getInputStreams(path: String, extension: String): Map<String, InputStream> {
@@ -83,7 +86,7 @@ class ZipAccessor(
 
     override fun getInputStreams(path: String, extensions: List<String>): Map<String, InputStream> {
         val inputStreamMap: MutableMap<String, InputStream> = mutableMapOf()
-        val normalizedPath = File(path).normalize().invariantSeparatorsPath
+        val normalizedPath = path.normalizePath()
         val pathPrefix = if (root.isNullOrEmpty()) {
             normalizedPath
         } else {
@@ -111,7 +114,10 @@ class ZipAccessor(
             .bufferedReader()
     }
 
-    override fun fileExists(filename: String) = getEntry(filename) != null
+    override fun fileExists(filename: String): Boolean {
+        val normalized = filename.normalizePath()
+        return getEntry(normalized) != null
+    }
 
     override fun initWrite() {
         // noop

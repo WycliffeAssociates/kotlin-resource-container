@@ -17,7 +17,8 @@ class DirectoryAccessor(private val rootDir: File) : IResourceContainerAccessor 
     }
 
     override fun getInputStream(filename: String): InputStream {
-        return getFile(filename).inputStream()
+        val normalized = File(filename).normalize().invariantSeparatorsPath
+        return getFile(normalized).inputStream()
     }
 
     override fun getInputStreams(path: String, extension: String): Map<String, InputStream> {

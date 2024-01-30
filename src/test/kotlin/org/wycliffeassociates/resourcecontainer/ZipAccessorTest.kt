@@ -18,6 +18,19 @@ class ZipAccessorTest {
         }
     }
 
+    @Test
+    fun testGetInputStream() {
+        val rcFile = getResourceFile("valid_single_book_rc.zip")
+
+        ResourceContainer.load(rcFile).use { rc ->
+            filePathVariantTestCases.forEach { pathInRC ->
+                Assert.assertTrue(rc.accessor.fileExists(pathInRC))
+
+                rc.accessor.getInputStream(pathInRC).use {} // should not throw exception
+            }
+        }
+    }
+
     private fun getResourceFile(name: String): File {
         return javaClass.classLoader.getResource(name)?.file
             ?.let { File(it) } ?: throw FileNotFoundException("Resource not found: $name")
